@@ -172,13 +172,13 @@ Expected output should show:
 - Assesses bacterial genome quality using machine learning
 - Provides completeness and contamination estimates
 - Uses protein markers for genome quality assessment
-- Publication: [CheckM2: a rapid, scalable and accurate method for assessing microbial genome quality at the strain level](https://www.nature.com/articles/s41592-023-02003-w)
+- Publication: [CheckM2: a rapid, scalable and accurate tool for assessing microbial genome quality using machine learning](https://doi.org/10.1038/s41592-023-01940-w)
 
 #### dRep (v3.5.0)
 - Performs genome dereplication based on sequence similarity
 - Uses Average Nucleotide Identity (ANI) for comparison
 - Identifies and selects representative genomes
-- Publication: [dRep: a tool for fast and accurate genomic comparisons that enables improved genome recovery from metagenomes through de-replication](https://www.nature.com/articles/ismej2017126)
+- Publication: [dRep: a tool for fast and accurate genomic comparisons that enables improved genome recovery from metagenomes through de-replication](https://doi.org/10.1038/ismej.2017.126)
 
 ### Running the Workflow
 
@@ -287,14 +287,14 @@ nextflow run main.nf -resume \
 - Identifies both viruses and plasmids in genomic sequences
 - Uses marker genes and sequence characteristics
 - Provides confidence scores for predictions
-- Publication: [geNomad: a deep-learning tool for identifying mobile genetic elements](https://www.nature.com/articles/s41592-023-02119-z)
+- Publication: [Identification of mobile genetic elements with geNomad](https://doi.org/10.1038/s41587-023-01953-y)
 
 #### VIBRANT (v1.2.1)
 - Neural network-based virus identification tool
 - Specializes in identifying integrated prophages
 - Uses protein-based sequence annotation
 - Includes viral lifestyle prediction
-- Publication: [VIBRANT: automated recovery, annotation and curation of microbial viruses, and evaluation of viral community function from genomic sequences](https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-020-00867-0)
+- Publication: [VIBRANT: automated recovery, annotation and curation of microbial viruses, and evaluation of viral community function from genomic sequences](https://doi.org/10.1186/s40168-020-00867-0)
 
 ### Running the Workflow
 
@@ -407,24 +407,23 @@ nextflow run main.nf -resume \
 - Quality assessment tool for viral sequences
 - Estimates genome completeness
 - Provides quality metrics and contamination detection
-- Publication: [CheckV assesses the quality and completeness of metagenome-assembled viral genomes](https://www.nature.com/articles/s41587-020-00774-7)
+- Publication: [CheckV assesses the quality and completeness of metagenome-assembled viral genomes](https://doi.org/10.1038/s41587-020-00774-7)
 
 #### Pharokka (v1.7.4)
 - Specialized phage genome annotation tool
 - Identifies and annotates phage-specific genes
 - Provides functional categorization of viral proteins
-- Publication: [Pharokka: a fast, accurate and easy-to-use virus genome annotator](https://academic.oup.com/bioinformatics/article/39/11/btad611/7309018)
+- Publication: [Pharokka: a fast scalable bacteriophage annotation tool](https://doi.org/10.1093/bioinformatics/btac776)
 
 #### PHOLD (v0.2.0)
 - Host-interaction and defense system prediction
 - Identifies anti-CRISPR proteins
 - Detects viral defense systems
-- Publication: [PHOLD: integrating multiple viral host–interaction tools to identify putative host ranges of viruses](https://academic.oup.com/bioinformatics/article/39/4/btad187/7124715)
+- Repository: [PHOLD: Phage Annotation using Protein Structures](https://github.com/gbouras13/phold)
 
 #### Clustering Tools
 - BLAST-based all-vs-all comparison
-- ANI (Average Nucleotide Identity) calculation
-- Sequence clustering for identifying viral populations
+- ANI (Average Nucleotide Identity) calculation using aniclust
 
 ### Running the Workflow
 
