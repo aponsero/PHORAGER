@@ -1,0 +1,541 @@
+# Prophage Analysis Pipeline
+
+## Overview
+
+This Nextflow pipeline provides a comprehensive suite of tools for bacterial genome quality control, prophage detection, and prophage characterization. The pipeline is organized into three main workflows:
+
+### 1. Bacterial Genome Quality Control (`--workflow bacterial`)
+Quality assessment and dereplication of bacterial genomes using:
+- **CheckM2**: Evaluates genome completeness and contamination
+- **dRep**: Performs genome dereplication to remove redundant sequences
+
+### 2. Prophage Detection (`--workflow prophage`)
+Identification and extraction of prophage sequences using complementary approaches:
+- **geNomad**: Machine learning-based viral sequence detection
+- **VIBRANT**: Neural network-based virus identification
+
+### 3. Prophage Annotation (`--workflow annotation`)
+Multi-level characterization of prophage sequences:
+- **CheckV**: Quality assessment of viral sequences
+- **Pharokka**: Specialized phage genome annotation
+- **PHOLD**: Host-interaction and defense system prediction
+- **Clustering**: Sequence-based clustering to identify unique viral populations
+
+## Pipeline Features
+
+- **Modular Design**: Each workflow can be run independently or as part of a complete analysis
+- **Flexible Input**: Accepts single genomes or directories of multiple genomes
+- **Quality Control**: Multiple filtering steps to ensure high-quality predictions
+- **Comprehensive Analysis**: From genome QC to detailed prophage characterization
+- **Reproducibility**: Conda environment management for consistent tool versions
+- **Scalability**: Suitable for both single genomes and large datasets
+
+## Quick Start
+
+```bash
+# Install pipeline and databases
+nextflow run main.nf --workflow install
+
+# Basic bacterial genome analysis
+nextflow run main.nf --workflow bacterial --genome /path/to/genomes
+
+# Prophage detection
+nextflow run main.nf --workflow prophage --genome /path/to/genomes
+
+# Prophage annotation
+nextflow run main.nf --workflow annotation
+```
+
+## Installation
+
+### System Requirements
+
+- Linux-based operating system
+- Minimum 32GB RAM recommended (64GB for large datasets)
+- Minimum 100GB free disk space for databases
+- Internet connection for initial setup
+
+### Prerequisites
+
+1. **Nextflow** (≥ 22.10.0)
+```bash
+# Install Nextflow
+curl -s https://get.nextflow.io | bash
+# Add to your PATH
+mv nextflow ~/bin/
+```
+
+2. **Conda or Mamba** package manager
+```bash
+# Install Miniconda
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh
+bash Miniconda3-latest-Linux-x86_64.sh
+
+# Or install Mamba (recommended for faster dependency resolution)
+conda install -c conda-forge mamba
+```
+
+### Pipeline Installation
+
+1. Clone the repository:
+```bash
+git clone [repository-url]
+cd [repository-name]
+```
+
+2. Install required databases and tools:
+```bash
+nextflow run main.nf --workflow install
+```
+
+This installation workflow will:
+- Set up all required conda environments
+- Download and install databases for:
+  - CheckM2 (≈ 1.3GB)
+  - geNomad (≈ 2.5GB)
+  - VIBRANT (≈ 12GB)
+  - CheckV (≈ 1.5GB)
+  - Pharokka (≈ 3GB)
+  - PHOLD (≈ 0.5GB)
+
+### Configuration
+
+The pipeline configuration can be customized in `nextflow.config`. Key configuration parameters include:
+
+```nextflow
+params {
+    // Output directory
+    outdir = "$projectDir/results"
+
+    // Conda environment location
+    conda_cache_dir = "$projectDir/conda_cache"
+
+    // Database locations
+    global_db_location = "$projectDir/databases"
+    checkm2_db_location = "$projectDir/databases/CheckM2_database"
+    genomad_db_location = "$projectDir/databases/geNomad_database/genomad_db"
+    vibrant_db_location = "$projectDir/databases/vibrant_database"
+    checkv_db_location = "$projectDir/databases/checkv_database/checkv-db-v1.5"
+    pharokka_db_location = "$projectDir/databases/pharokka_database"
+    phold_db_location = "$projectDir/databases/phold_database"
+
+    // Computational resources
+    max_memory = '128.GB'
+    max_cpus = 16
+    max_time = '240.h'
+}
+```
+
+These parameters can be modified either by:
+1. Editing the config file directly
+2. Providing parameters via command line:
+```bash
+nextflow run main.nf --workflow install \
+    --conda_cache_dir /path/to/conda \
+    --global_db_location /path/to/databases
+```
+
+### Conda Environment Setup
+
+The pipeline uses separate conda environments for each tool to manage dependencies. These are automatically created in the specified `conda_cache_dir` when running the installation workflow. Key environments include:
+
+| Tool | Version | Key Dependencies |
+|------|---------|-----------------|
+| CheckM2 | 1.0.1 | Python 3.9 |
+| dRep | 3.5.0 | Python 3.9, MUMmer4 |
+| geNomad | 1.8.1 | Python 3.9, HMMER 3.3 |
+| VIBRANT | 1.2.1 | Python 3.9 |
+| CheckV | 1.0.3 | Python 3.9, BLAST 2.16.0 |
+| Pharokka | 1.7.4 | Python 3.9 |
+| PHOLD | 0.2.0 | Python 3.9 |
+
+### Verifying Installation
+
+After installation, verify the setup with:
+```bash
+# Check database installation
+ls -l $projectDir/databases
+
+# Verify conda environments
+conda env list | grep -E 'checkm2|drep|genomad|vibrant|checkv|pharokka|phold'
+```
+
+Expected output should show:
+1. Populated database directories for each tool
+2. Created conda environments with correct versions
+
+## Bacterial Workflow
+
+### Tool Overview
+
+#### CheckM2 (v1.0.1)
+- Assesses bacterial genome quality using machine learning
+- Provides completeness and contamination estimates
+- Uses protein markers for genome quality assessment
+- Publication: [CheckM2: a rapid, scalable and accurate method for assessing microbial genome quality at the strain level](https://www.nature.com/articles/s41592-023-02003-w)
+
+#### dRep (v3.5.0)
+- Performs genome dereplication based on sequence similarity
+- Uses Average Nucleotide Identity (ANI) for comparison
+- Identifies and selects representative genomes
+- Publication: [dRep: a tool for fast and accurate genomic comparisons that enables improved genome recovery from metagenomes through de-replication](https://www.nature.com/articles/ismej2017126)
+
+### Running the Workflow
+
+Basic usage:
+```bash
+nextflow run main.nf --workflow bacterial --genome /path/to/genomes
+```
+
+#### Input Requirements
+- Input genomes must be in FASTA format (.fa, .fasta, or .fna)
+- Accepts either:
+  - A directory containing multiple genome files
+  - A single genome file
+- Assemblies should be reasonably complete (recommended N50 > 50kb)
+
+#### Parameters
+
+| Parameter | Description | Default | Usage Example |
+|-----------|-------------|---------|---------------|
+| `--genome` | Input genome file or directory | `$projectDir/data/genome.fa` | `--genome /path/to/genomes` |
+| `--completeness_threshold` | Minimum genome completeness (%) | 95 | `--completeness_threshold 90` |
+| `--contamination_threshold` | Maximum contamination allowed (%) | 5 | `--contamination_threshold 10` |
+| `--drep_ani_threshold` | ANI threshold for dereplication | 0.999 | `--drep_ani_threshold 0.95` |
+
+### Output Structure
+
+```
+results/
+└── 1.Genome_preprocessing/
+    ├── Bacterial_genome_QC.log       # Overall workflow summary
+    ├── Bact1_CheckM2/               
+    │   ├── checkm2_output/          # Raw CheckM2 results
+    │   └── quality_report.tsv       # Genome quality metrics
+    ├── Bact2_FilteredGenomes/       
+    │   ├── passed_genomes.txt       # List of genomes passing QC
+    │   └── failed_genomes.txt       # List of failed genomes
+    └── Bact3_dRep/                  
+        └── drep_output/             
+            └── dereplicated_genomes/ # Final dereplicated genomes
+
+```
+
+#### Output Files Description
+
+1. **Bacterial_genome_QC.log**
+   - Summary of workflow execution
+   - Input parameters used
+   - Number of genomes at each step
+   - Quality filtering results
+   - Dereplication results
+
+2. **CheckM2 Output (Bact1_CheckM2/)**
+   - `quality_report.tsv`: Tab-separated file containing:
+     - Genome completeness scores
+     - Contamination estimates
+     - Other quality metrics
+   - Raw CheckM2 output files
+
+3. **Filtered Genomes (Bact2_FilteredGenomes/)**
+   - Lists of genomes that passed/failed quality thresholds
+   - Includes full paths to genome files
+   - Quality metrics for failed genomes
+
+4. **dRep Output (Bact3_dRep/)**
+   - Only present if multiple genomes pass quality filtering
+   - Contains dereplicated genome sequences
+   - Clustering information
+   - ANI comparison results
+
+### Example Commands
+
+1. Basic run with default parameters:
+```bash
+nextflow run main.nf --workflow bacterial \
+    --genome /path/to/genomes
+```
+
+2. Custom quality thresholds:
+```bash
+nextflow run main.nf --workflow bacterial \
+    --genome /path/to/genomes \
+    --completeness_threshold 90 \
+    --contamination_threshold 10
+```
+
+3. Less stringent dereplication:
+```bash
+nextflow run main.nf --workflow bacterial \
+    --genome /path/to/genomes \
+    --drep_ani_threshold 0.95
+```
+
+4. Resume a previous run:
+```bash
+nextflow run main.nf -resume \
+    --workflow bacterial \
+    --genome /path/to/genomes
+```
+
+## Prophage Workflow
+
+### Tool Overview
+
+#### geNomad (v1.8.1)
+- Machine learning-based tool for viral sequence detection
+- Identifies both viruses and plasmids in genomic sequences
+- Uses marker genes and sequence characteristics
+- Provides confidence scores for predictions
+- Publication: [geNomad: a deep-learning tool for identifying mobile genetic elements](https://www.nature.com/articles/s41592-023-02119-z)
+
+#### VIBRANT (v1.2.1)
+- Neural network-based virus identification tool
+- Specializes in identifying integrated prophages
+- Uses protein-based sequence annotation
+- Includes viral lifestyle prediction
+- Publication: [VIBRANT: automated recovery, annotation and curation of microbial viruses, and evaluation of viral community function from genomic sequences](https://microbiomejournal.biomedcentral.com/articles/10.1186/s40168-020-00867-0)
+
+### Running the Workflow
+
+Basic usage:
+```bash
+nextflow run main.nf --workflow prophage --genome /path/to/genomes
+```
+
+#### Input Requirements
+- Input genomes must be in FASTA format (.fa, .fasta, or .fna)
+- Accepts either:
+  - A directory containing multiple genome files
+  - A single genome file
+- Can use dereplicated genomes from bacterial workflow
+- Recommended minimum contig size: 5kb
+
+#### Parameters
+
+| Parameter | Description | Default | Usage Example |
+|-----------|-------------|---------|---------------|
+| `--genome` | Input genome file or directory | `$projectDir/data/genome.fa` | `--genome /path/to/genomes` |
+| `--use_dereplicated_genomes` | Use output from bacterial workflow | false | `--use_dereplicated_genomes true` |
+| `--run_genomad` | Enable geNomad analysis | true | `--run_genomad false` |
+| `--run_vibrant` | Enable VIBRANT analysis | true | `--run_vibrant false` |
+
+### Output Structure
+
+```
+results/
+└── 2.Prophage_detection/
+    ├── Prophage_detection_summary.log    # Overall workflow summary
+    ├── All_prophage_sequences.fasta      # Combined prophage sequences
+    ├── All_prophage_coordinates.tsv      # Combined coordinates
+    ├── Proph1_geNomad/                  
+    │   └── [genome_name]/
+    │       ├── genomad_output/          # Raw geNomad results
+    │       └── [genome]_genomad_coordinates.tsv
+    ├── Proph2_VIBRANT/                  
+    │   └── [genome_name]/
+    │       ├── vibrant_output/          # Raw VIBRANT results
+    │       └── [genome]_vibrant_coordinates.tsv
+    └── Proph3_Comparison/               
+        └── [genome_name]/
+            ├── [genome]_consolidated_coordinates.tsv
+            ├── [genome]_comparison_summary.txt
+            └── [genome]_prophage_sequences.fasta
+```
+
+#### Output Files Description
+
+1. **Prophage_detection_summary.log**
+   - Overall workflow summary
+   - Number of genomes analyzed
+   - Prophages detected by each tool
+   - Total prophage sequences extracted
+   - Tool-specific statistics
+
+2. **Combined Output Files**
+   - `All_prophage_sequences.fasta`: All predicted prophage sequences
+   - `All_prophage_coordinates.tsv`: Coordinates for all predictions
+
+3. **geNomad Output (Proph1_geNomad/)**
+   - Full geNomad analysis results
+   - Coordinates of predicted prophages
+   - Confidence scores and markers detected
+
+4. **VIBRANT Output (Proph2_VIBRANT/)**
+   - Complete VIBRANT analysis results
+   - Prophage coordinates and annotations
+   - Lifestyle predictions
+
+5. **Comparison Results (Proph3_Comparison/)**
+   - Combined predictions from both tools
+   - Per-genome summary statistics
+   - Extracted prophage sequences
+
+### Example Commands
+
+1. Basic run with all tools:
+```bash
+nextflow run main.nf --workflow prophage \
+    --genome /path/to/genomes
+```
+
+2. Use dereplicated genomes from bacterial workflow:
+```bash
+nextflow run main.nf --workflow prophage \
+    --use_dereplicated_genomes true
+```
+
+3. Run only geNomad:
+```bash
+nextflow run main.nf --workflow prophage \
+    --genome /path/to/genomes \
+    --run_vibrant false
+```
+
+4. Resume a failed run:
+```bash
+nextflow run main.nf -resume \
+    --workflow prophage \
+    --genome /path/to/genomes
+```
+
+## Annotation Workflow
+
+### Tool Overview
+
+#### CheckV (v1.0.3)
+- Quality assessment tool for viral sequences
+- Estimates genome completeness
+- Provides quality metrics and contamination detection
+- Publication: [CheckV assesses the quality and completeness of metagenome-assembled viral genomes](https://www.nature.com/articles/s41587-020-00774-7)
+
+#### Pharokka (v1.7.4)
+- Specialized phage genome annotation tool
+- Identifies and annotates phage-specific genes
+- Provides functional categorization of viral proteins
+- Publication: [Pharokka: a fast, accurate and easy-to-use virus genome annotator](https://academic.oup.com/bioinformatics/article/39/11/btad611/7309018)
+
+#### PHOLD (v0.2.0)
+- Host-interaction and defense system prediction
+- Identifies anti-CRISPR proteins
+- Detects viral defense systems
+- Publication: [PHOLD: integrating multiple viral host–interaction tools to identify putative host ranges of viruses](https://academic.oup.com/bioinformatics/article/39/4/btad187/7124715)
+
+#### Clustering Tools
+- BLAST-based all-vs-all comparison
+- ANI (Average Nucleotide Identity) calculation
+- Sequence clustering for identifying viral populations
+
+### Running the Workflow
+
+Basic usage:
+```bash
+nextflow run main.nf --workflow annotation
+```
+
+#### Input Requirements
+- Prophage sequences in FASTA format
+- Can use either:
+  - Output from prophage workflow (automatic)
+  - User-provided sequences (via --prophage_fasta)
+- Recommended minimum sequence length: 5kb
+
+#### Parameters
+
+| Parameter | Description | Default | Usage Example |
+|-----------|-------------|---------|---------------|
+| `--prophage_fasta` | Input prophage sequences | null | `--prophage_fasta /path/to/prophages.fasta` |
+| `--min_prophage_length` | Minimum sequence length | 5000 | `--min_prophage_length 10000` |
+| `--checkv_quality_levels` | Acceptable quality levels | ['Medium-quality', 'High-quality', 'Complete'] | `--checkv_quality_levels '["High-quality"]'` |
+| `--skip_detailed_annotation` | Skip Pharokka and PHOLD | false | `--skip_detailed_annotation true` |
+| `--pharokka_structural_perc` | Min % structural genes (Pharokka) | 20.0 | `--pharokka_structural_perc 25.0` |
+| `--pharokka_structural_total` | Min structural genes (Pharokka) | 3 | `--pharokka_structural_total 4` |
+| `--phold_structural_perc` | Min % structural genes (PHOLD) | 20.0 | `--phold_structural_perc 25.0` |
+| `--phold_structural_total` | Min structural genes (PHOLD) | 3 | `--phold_structural_total 4` |
+| `--clustering_min_ani` | Minimum ANI for clustering | 99.0 | `--clustering_min_ani 95.0` |
+| `--clustering_min_coverage` | Minimum coverage for clustering | 85.0 | `--clustering_min_coverage 80.0` |
+
+### Output Structure
+
+```
+results/
+└── 3.Annotation/
+    ├── Annotation_summary.log         # Overall workflow summary
+    ├── Final_representatives.fasta    # Cluster representative sequences
+    ├── Cluster_information.tsv       # Cluster assignments
+    ├── Anno1_CheckV/                
+    │   ├── checkv_output/           # Raw CheckV results
+    │   └── filtered_prophages.fasta # Quality-filtered sequences
+    ├── Anno2_SplitSequences/        # Individual sequence files
+    ├── Anno3_Pharokka/              # Pharokka results for each sequence
+    │   └── [sequence_name]_pharokka/
+    │       ├── pharokka_proteins.faa
+    │       └── pharokka_cds_functions.tsv
+    ├── Anno4_PHOLD/                 # PHOLD results for each sequence
+    │   └── [sequence_name]_phold/
+    │       └── phold_all_cds_functions.tsv
+    └── Anno5_FilteredResults/       
+        ├── filtered_annotation_output.tsv
+        └── annotation_filtered_sequences/
+```
+
+#### Output Files Description
+
+1. **Summary Files**
+   - `Annotation_summary.log`: Complete workflow summary
+   - `Final_representatives.fasta`: Representative sequences from clusters
+   - `Cluster_information.tsv`: Cluster assignments and members
+
+2. **CheckV Results (Anno1_CheckV/)**
+   - Quality assessment for each sequence
+   - Completeness estimates
+   - Quality-filtered sequences
+
+3. **Annotation Results**
+   - Pharokka functional annotations
+   - PHOLD host-interaction predictions
+   - Gene counts and categorizations
+   - Structural gene identification
+
+4. **Clustering Results**
+   - All-vs-all BLAST results
+   - ANI calculations
+   - Final cluster assignments
+   - Representative sequence selection
+
+### Example Commands
+
+1. Basic run with prophage workflow output:
+```bash
+nextflow run main.nf --workflow annotation
+```
+
+2. Run with custom input and quality thresholds:
+```bash
+nextflow run main.nf --workflow annotation \
+    --prophage_fasta /path/to/prophages.fasta \
+    --min_prophage_length 10000 \
+    --checkv_quality_levels '["High-quality", "Complete"]'
+```
+
+3. Adjust structural gene requirements:
+```bash
+nextflow run main.nf --workflow annotation \
+    --pharokka_structural_perc 25.0 \
+    --pharokka_structural_total 4 \
+    --phold_structural_perc 25.0 \
+    --phold_structural_total 4
+```
+
+4. Modified clustering parameters:
+```bash
+nextflow run main.nf --workflow annotation \
+    --clustering_min_ani 95.0 \
+    --clustering_min_coverage 80.0
+```
+
+5. Skip detailed annotation:
+```bash
+nextflow run main.nf --workflow annotation \
+    --skip_detailed_annotation true
+```
