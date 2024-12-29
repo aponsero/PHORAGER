@@ -1,20 +1,20 @@
-# Prophage Analysis Pipeline
+# Prophage Analysis Pipeline (Phorager)
 
 ## Overview
 
 This Nextflow pipeline provides a comprehensive suite of tools for bacterial genome quality control, prophage detection, and prophage characterization. The pipeline is organized into three main workflows:
 
-### 1. Bacterial Genome Quality Control (`--workflow bacterial`)
+### 1. Bacterial Genome Quality Control (`phorager bacterial` or `--workflow bacterial`)
 Quality assessment and dereplication of bacterial genomes using:
 - **CheckM2**: Evaluates genome completeness and contamination
 - **dRep**: Performs genome dereplication to remove redundant sequences
 
-### 2. Prophage Detection (`--workflow prophage`)
+### 2. Prophage Detection (`phorager prophage` or `--workflow prophage`)
 Identification and extraction of prophage sequences using complementary approaches:
 - **geNomad**: Machine learning-based viral sequence detection
 - **VIBRANT**: Neural network-based virus identification
 
-### 3. Prophage Annotation (`--workflow annotation`)
+### 3. Prophage Annotation (`phorager annotation` or `--workflow annotation`)
 Multi-level characterization of prophage sequences:
 - **CheckV**: Quality assessment of viral sequences
 - **Pharokka**: Specialized phage genome annotation
@@ -29,9 +29,26 @@ Multi-level characterization of prophage sequences:
 - **Comprehensive Analysis**: From genome QC to detailed prophage characterization
 - **Reproducibility**: Conda environment management for consistent tool versions
 - **Scalability**: Suitable for both single genomes and large datasets
+- **User-Friendly Interface**: Command-line wrapper script for easy execution
 
 ## Quick Start
 
+Using the wrapper script (recommended):
+```bash
+# Install pipeline and databases
+./phorager install
+
+# Basic bacterial genome analysis
+./phorager bacterial --genome /path/to/genomes
+
+# Prophage detection
+./phorager prophage --genome /path/to/genomes
+
+# Prophage annotation
+./phorager annotation
+```
+
+Using Nextflow directly:
 ```bash
 # Install pipeline and databases
 nextflow run main.nf --workflow install
@@ -77,14 +94,23 @@ conda install -c conda-forge mamba
 
 ### Pipeline Installation
 
-1. Clone the repository:
+1. Clone the repository and setup:
 ```bash
+# Clone repository
 git clone [repository-url]
 cd [repository-name]
+
+# Setup wrapper script (optional but recommended)
+chmod +x phorager
+chmod +x lib/*.sh
 ```
 
 2. Install required databases and tools:
 ```bash
+# Using the wrapper script (recommended)
+./phorager install
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow install
 ```
 
@@ -119,17 +145,20 @@ params {
     pharokka_db_location = "$projectDir/databases/pharokka_database"
     phold_db_location = "$projectDir/databases/phold_database"
 
-    // Computational resources
-    max_memory = '128.GB'
-    max_cpus = 16
-    max_time = '240.h'
 }
 ```
 
 These parameters can be modified either by:
 1. Editing the config file directly
-2. Providing parameters via command line:
+2. Providing parameters via command line with either the wrapper or Nextflow:
+
 ```bash
+# Using the wrapper script
+./phorager install \
+    --conda_cache /path/to/conda \
+    --db_location /path/to/databases
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow install \
     --conda_cache_dir /path/to/conda \
     --global_db_location /path/to/databases
@@ -184,6 +213,10 @@ Expected output should show:
 
 Basic usage:
 ```bash
+# Using the wrapper script (recommended)
+./phorager bacterial --genome /path/to/genomes
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow bacterial --genome /path/to/genomes
 ```
 
@@ -196,12 +229,14 @@ nextflow run main.nf --workflow bacterial --genome /path/to/genomes
 
 #### Parameters
 
-| Parameter | Description | Default | Usage Example |
-|-----------|-------------|---------|---------------|
-| `--genome` | Input genome file or directory | `$projectDir/data/genome.fa` | `--genome /path/to/genomes` |
-| `--completeness_threshold` | Minimum genome completeness (%) | 95 | `--completeness_threshold 90` |
-| `--contamination_threshold` | Maximum contamination allowed (%) | 5 | `--contamination_threshold 10` |
-| `--drep_ani_threshold` | ANI threshold for dereplication | 0.999 | `--drep_ani_threshold 0.95` |
+| Parameter | Description | Default | Wrapper Usage | Nextflow Usage |
+|-----------|-------------|---------|---------------|----------------|
+| `--genome` | Input genome file or directory | `$projectDir/data/genome.fa` | `--genome /path/to/genomes` | `--genome /path/to/genomes` |
+| `--completeness_threshold` | Minimum genome completeness (%) | 95 | `--completeness_threshold 90` | `--completeness_threshold 90` |
+| `--contamination_threshold` | Maximum contamination allowed (%) | 5 | `--contamination_threshold 10` | `--contamination_threshold 10` |
+| `--drep_ani_threshold` | ANI threshold for dereplication | 0.999 | `--drep_ani_threshold 0.95` | `--drep_ani_threshold 0.95` |
+| `--conda_cache` | Path to conda environment directory | `$HOME/phorager/conda_cache` | `--conda_cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
+| `--db_location` | Path to database directory | `$HOME/phorager/databases` | `--db_location /path/to/db` | `--global_db_location /path/to/db` |
 
 ### Output Structure
 
@@ -218,7 +253,6 @@ results/
     └── Bact3_dRep/                  
         └── drep_output/             
             └── dereplicated_genomes/ # Final dereplicated genomes
-
 ```
 
 #### Output Files Description
@@ -252,12 +286,23 @@ results/
 
 1. Basic run with default parameters:
 ```bash
+# Using the wrapper script
+./phorager bacterial --genome /path/to/genomes
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow bacterial \
     --genome /path/to/genomes
 ```
 
 2. Custom quality thresholds:
 ```bash
+# Using the wrapper script
+./phorager bacterial \
+    --genome /path/to/genomes \
+    --completeness_threshold 90 \
+    --contamination_threshold 10
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow bacterial \
     --genome /path/to/genomes \
     --completeness_threshold 90 \
@@ -266,6 +311,12 @@ nextflow run main.nf --workflow bacterial \
 
 3. Less stringent dereplication:
 ```bash
+# Using the wrapper script
+./phorager bacterial \
+    --genome /path/to/genomes \
+    --drep_ani_threshold 0.95
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow bacterial \
     --genome /path/to/genomes \
     --drep_ani_threshold 0.95
@@ -273,9 +324,30 @@ nextflow run main.nf --workflow bacterial \
 
 4. Resume a previous run:
 ```bash
+# Using the wrapper script
+./phorager bacterial \
+    --genome /path/to/genomes \
+    -resume
+
+# Or using Nextflow directly
 nextflow run main.nf -resume \
     --workflow bacterial \
     --genome /path/to/genomes
+```
+
+5. Custom database and conda locations:
+```bash
+# Using the wrapper script
+./phorager bacterial \
+    --genome /path/to/genomes \
+    --conda_cache /path/to/conda \
+    --db_location /path/to/databases
+
+# Or using Nextflow directly
+nextflow run main.nf --workflow bacterial \
+    --genome /path/to/genomes \
+    --conda_cache_dir /path/to/conda \
+    --global_db_location /path/to/databases
 ```
 
 ## Prophage Workflow
@@ -300,6 +372,10 @@ nextflow run main.nf -resume \
 
 Basic usage:
 ```bash
+# Using the wrapper script (recommended)
+./phorager prophage --genome /path/to/genomes
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow prophage --genome /path/to/genomes
 ```
 
@@ -313,12 +389,14 @@ nextflow run main.nf --workflow prophage --genome /path/to/genomes
 
 #### Parameters
 
-| Parameter | Description | Default | Usage Example |
-|-----------|-------------|---------|---------------|
-| `--genome` | Input genome file or directory | `$projectDir/data/genome.fa` | `--genome /path/to/genomes` |
-| `--use_dereplicated_genomes` | Use output from bacterial workflow | false | `--use_dereplicated_genomes true` |
-| `--run_genomad` | Enable geNomad analysis | true | `--run_genomad false` |
-| `--run_vibrant` | Enable VIBRANT analysis | true | `--run_vibrant false` |
+| Parameter | Description | Default | Wrapper Usage | Nextflow Usage |
+|-----------|-------------|---------|---------------|----------------|
+| `--genome` | Input genome file or directory | `$projectDir/data/genome.fa` | `--genome /path/to/genomes` | `--genome /path/to/genomes` |
+| `--use_dereplicated_genomes` | Use output from bacterial workflow | false | `--use_dereplicated_genomes true` | `--use_dereplicated_genomes true` |
+| `--run_genomad` | Enable geNomad analysis | true | `--run_genomad false` | `--run_genomad false` |
+| `--run_vibrant` | Enable VIBRANT analysis | true | `--run_vibrant false` | `--run_vibrant false` |
+| `--conda_cache` | Path to conda environment directory | `$HOME/phorager/conda_cache` | `--conda_cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
+| `--db_location` | Path to database directory | `$HOME/phorager/databases` | `--db_location /path/to/db` | `--global_db_location /path/to/db` |
 
 ### Output Structure
 
@@ -375,18 +453,34 @@ results/
 
 1. Basic run with all tools:
 ```bash
+# Using the wrapper script
+./phorager prophage \
+    --genome /path/to/genomes
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow prophage \
     --genome /path/to/genomes
 ```
 
 2. Use dereplicated genomes from bacterial workflow:
 ```bash
+# Using the wrapper script
+./phorager prophage \
+    --use_dereplicated_genomes true
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow prophage \
     --use_dereplicated_genomes true
 ```
 
 3. Run only geNomad:
 ```bash
+# Using the wrapper script
+./phorager prophage \
+    --genome /path/to/genomes \
+    --run_vibrant false
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow prophage \
     --genome /path/to/genomes \
     --run_vibrant false
@@ -394,11 +488,31 @@ nextflow run main.nf --workflow prophage \
 
 4. Resume a failed run:
 ```bash
+# Using the wrapper script
+./phorager prophage \
+    --genome /path/to/genomes \
+    -resume
+
+# Or using Nextflow directly
 nextflow run main.nf -resume \
     --workflow prophage \
     --genome /path/to/genomes
 ```
 
+5. Custom database and conda locations:
+```bash
+# Using the wrapper script
+./phorager prophage \
+    --genome /path/to/genomes \
+    --conda_cache /path/to/conda \
+    --db_location /path/to/databases
+
+# Or using Nextflow directly
+nextflow run main.nf --workflow prophage \
+    --genome /path/to/genomes \
+    --conda_cache_dir /path/to/conda \
+    --global_db_location /path/to/databases
+```
 ## Annotation Workflow
 
 ### Tool Overview
@@ -429,6 +543,10 @@ nextflow run main.nf -resume \
 
 Basic usage:
 ```bash
+# Using the wrapper script (recommended)
+./phorager annotation
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow annotation
 ```
 
@@ -441,18 +559,20 @@ nextflow run main.nf --workflow annotation
 
 #### Parameters
 
-| Parameter | Description | Default | Usage Example |
-|-----------|-------------|---------|---------------|
-| `--prophage_fasta` | Input prophage sequences | null | `--prophage_fasta /path/to/prophages.fasta` |
-| `--min_prophage_length` | Minimum sequence length | 5000 | `--min_prophage_length 10000` |
-| `--checkv_quality_levels` | Acceptable quality levels | ['Medium-quality', 'High-quality', 'Complete'] | `--checkv_quality_levels '["High-quality"]'` |
-| `--skip_detailed_annotation` | Skip Pharokka and PHOLD | false | `--skip_detailed_annotation true` |
-| `--pharokka_structural_perc` | Min % structural genes (Pharokka) | 20.0 | `--pharokka_structural_perc 25.0` |
-| `--pharokka_structural_total` | Min structural genes (Pharokka) | 3 | `--pharokka_structural_total 4` |
-| `--phold_structural_perc` | Min % structural genes (PHOLD) | 20.0 | `--phold_structural_perc 25.0` |
-| `--phold_structural_total` | Min structural genes (PHOLD) | 3 | `--phold_structural_total 4` |
-| `--clustering_min_ani` | Minimum ANI for clustering | 99.0 | `--clustering_min_ani 95.0` |
-| `--clustering_min_coverage` | Minimum coverage for clustering | 85.0 | `--clustering_min_coverage 80.0` |
+| Parameter | Description | Default | Wrapper Usage | Nextflow Usage |
+|-----------|-------------|---------|---------------|----------------|
+| `--prophage_fasta` | Input prophage sequences | null | `--prophage_fasta /path/to/prophages.fasta` | `--prophage_fasta /path/to/prophages.fasta` |
+| `--min_prophage_length` | Minimum sequence length | 5000 | `--min_prophage_length 10000` | `--min_prophage_length 10000` |
+| `--checkv_quality_levels` | Acceptable quality levels | ['Medium-quality', 'High-quality', 'Complete'] | `--checkv_quality_levels 'High-quality,Complete'` | `--checkv_quality_levels '["High-quality", "Complete"]'` |
+| `--skip_detailed_annotation` | Skip Pharokka and PHOLD | false | `--skip_detailed_annotation true` | `--skip_detailed_annotation true` |
+| `--pharokka_structural_perc` | Min % structural genes (Pharokka) | 20.0 | `--pharokka_structural_perc 25.0` | `--pharokka_structural_perc 25.0` |
+| `--pharokka_structural_total` | Min structural genes (Pharokka) | 3 | `--pharokka_structural_total 4` | `--pharokka_structural_total 4` |
+| `--phold_structural_perc` | Min % structural genes (PHOLD) | 20.0 | `--phold_structural_perc 25.0` | `--phold_structural_perc 25.0` |
+| `--phold_structural_total` | Min structural genes (PHOLD) | 3 | `--phold_structural_total 4` | `--phold_structural_total 4` |
+| `--clustering_min_ani` | Minimum ANI for clustering | 99.0 | `--clustering_min_ani 95.0` | `--clustering_min_ani 95.0` |
+| `--clustering_min_coverage` | Minimum coverage for clustering | 85.0 | `--clustering_min_coverage 80.0` | `--clustering_min_coverage 80.0` |
+| `--conda_cache` | Path to conda environment directory | `$HOME/phorager/conda_cache` | `--conda_cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
+| `--db_location` | Path to database directory | `$HOME/phorager/databases` | `--db_location /path/to/db` | `--global_db_location /path/to/db` |
 
 ### Output Structure
 
@@ -506,11 +626,22 @@ results/
 
 1. Basic run with prophage workflow output:
 ```bash
+# Using the wrapper script
+./phorager annotation
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow annotation
 ```
 
 2. Run with custom input and quality thresholds:
 ```bash
+# Using the wrapper script
+./phorager annotation \
+    --prophage_fasta /path/to/prophages.fasta \
+    --min_prophage_length 10000 \
+    --checkv_quality_levels 'High-quality,Complete'
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow annotation \
     --prophage_fasta /path/to/prophages.fasta \
     --min_prophage_length 10000 \
@@ -519,6 +650,14 @@ nextflow run main.nf --workflow annotation \
 
 3. Adjust structural gene requirements:
 ```bash
+# Using the wrapper script
+./phorager annotation \
+    --pharokka_structural_perc 25.0 \
+    --pharokka_structural_total 4 \
+    --phold_structural_perc 25.0 \
+    --phold_structural_total 4
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow annotation \
     --pharokka_structural_perc 25.0 \
     --pharokka_structural_total 4 \
@@ -528,6 +667,12 @@ nextflow run main.nf --workflow annotation \
 
 4. Modified clustering parameters:
 ```bash
+# Using the wrapper script
+./phorager annotation \
+    --clustering_min_ani 95.0 \
+    --clustering_min_coverage 80.0
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow annotation \
     --clustering_min_ani 95.0 \
     --clustering_min_coverage 80.0
@@ -535,6 +680,27 @@ nextflow run main.nf --workflow annotation \
 
 5. Skip detailed annotation:
 ```bash
+# Using the wrapper script
+./phorager annotation \
+    --skip_detailed_annotation true
+
+# Or using Nextflow directly
 nextflow run main.nf --workflow annotation \
     --skip_detailed_annotation true
 ```
+
+6. Custom database and conda locations:
+```bash
+# Using the wrapper script
+./phorager annotation \
+    --conda_cache /path/to/conda \
+    --db_location /path/to/databases
+
+# Or using Nextflow directly
+nextflow run main.nf --workflow annotation \
+    --conda_cache_dir /path/to/conda \
+    --global_db_location /path/to/databases
+```
+
+
+

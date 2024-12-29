@@ -1,0 +1,321 @@
+#!/usr/bin/env python3
+
+import os
+import re
+import sys
+import shutil
+import argparse
+import logging
+import subprocess
+from datetime import datetime
+from pathlib import Path
+
+class TerminalColors:
+    GREEN = '\033[92m'
+    YELLOW = '\033[93m'
+    RED = '\033[91m'
+    RESET = '\033[0m'
+
+class NextflowConfigParser:
+    @staticmethod
+    def _resolve_project_dir():
+        """
+        Resolve the project directory based on the current script location
+        """
+        return os.path.dirname(os.path.abspath(sys.argv[0]))
+
+    @staticmethod
+    def parse_config(config_path='nextflow.config'):
+        """
+        Parse Nextflow configuration file to extract specific parameters
+        """
+        # Resolve project directory
+        project_dir = NextflowConfigParser._resolve_project_dir()
+
+        try:
+            with open(config_path, 'r') as f:
+                config_content = f.read()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Nextflow config file not found: {config_path}")
+
+        # Replace $projectDir with the actual project directory path
+        config_content = config_content.replace('$projectDir', project_dir)
+
+        # Extract database location
+        db_match = re.search(r'global_db_location\s*=\s*"([^"]+)"', config_content)
+        db_location = db_match.group(1) if db_match else None
+
+        # Extract conda cache directory
+        cache_match = re.search(r'conda_cache_dir\s*=\s*"([^"]+)"', config_content)
+        conda_cache_dir = cache_match.group(1) if cache_match else None
+
+        if not db_location or not conda_cache_dir:
+            raise ValueError("Could not parse database location or conda cache directory from config")
+
+        return {
+            'db_location': os.path.expandvars(os.path.expanduser(db_location)),
+            'conda_cache_dir': os.path.expandvars(os.path.expanduser(conda_cache_dir))
+        }
+
+class PhoragerInstaller:
+    def __init__(self, 
+                 db_location=None, 
+                 conda_cache_dir=None, 
+                 force_reinstall=False, 
+                 verbose=False):
+        # Parse configuration
+        config = NextflowConfigParser.parse_config()
+        
+        # Override config with CLI arguments if provided
+        self.db_location = os.path.expandvars(os.path.expanduser(db_location)) if db_location else config['db_location']
+        self.conda_cache_dir = os.path.expandvars(os.path.expanduser(conda_cache_dir)) if conda_cache_dir else config['conda_cache_dir']
+        
+        self.force_reinstall = force_reinstall
+        self.verbose = verbose
+        
+        # Logging setup
+        self._setup_logging()
+    
+    def _setup_logging(self):
+        """
+        Configure logging with file and console output
+        """
+        # Create logs directory if it doesn't exist
+        log_dir = Path('./phorager_logs')
+        log_dir.mkdir(exist_ok=True)
+        
+        # Generate log filename with timestamp
+        log_filename = log_dir / f"install_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        
+        # Configure logging
+        logging.basicConfig(
+            level=logging.DEBUG if self.verbose else logging.INFO,
+            format='%(asctime)s - %(levelname)s: %(message)s',
+            handlers=[
+                logging.FileHandler(log_filename),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+        
+        # Log the locations being used
+        self.logger.info(f"Database Location: {self.db_location}")
+        self.logger.info(f"Conda Cache Directory: {self.conda_cache_dir}")
+    
+    def _validate_nextflow_installation(self):
+        """
+        Check if Nextflow is installed and accessible
+        """
+        try:
+            subprocess.run(['nextflow', '-version'], 
+                           stdout=subprocess.PIPE, 
+                           stderr=subprocess.PIPE, 
+                           check=True)
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            self.logger.error(f"{TerminalColors.RED}Nextflow is not installed or not in PATH.{TerminalColors.RESET}")
+            sys.exit(1)
+    
+    def _check_disk_space(self, locations, min_space_gb=100):
+        """
+        Check available disk space for multiple locations
+        """
+        for location in locations:
+            try:
+                total, used, free = shutil.disk_usage(location)
+                free_gb = free / (1024**3)
+                
+                if free_gb < min_space_gb:
+                    self.logger.error(
+                        f"{TerminalColors.RED}Insufficient disk space for {location}. "
+                        f"Required: {min_space_gb}G, Available: {free_gb:.2f}G{TerminalColors.RESET}"
+                    )
+                    sys.exit(1)
+            except Exception as e:
+                self.logger.warning(f"Could not check disk space for {location}: {e}")
+    
+    def _prepare_directories(self):
+        """
+        Create database and conda cache directories if they don't exist
+        """
+        for location in [self.db_location, self.conda_cache_dir]:
+            os.makedirs(location, exist_ok=True)
+            self.logger.info(f"Ensuring directory exists: {location}")
+
+    def _run_nextflow_install(self):
+        """
+        Run Nextflow installation workflow with optional verbose output
+        """
+        # Installation command
+        install_cmd = [
+            'nextflow', 
+            'run', 
+            'main.nf', 
+            '-profile', 'conda',
+            '--workflow', 'install',
+            f'--global_db_location', self.db_location,
+            f'--conda_cache_dir', self.conda_cache_dir
+        ]
+        
+        # Add force flag if specified
+        if self.force_reinstall:
+            install_cmd.append('--force')
+        
+        # Clean and remove work directory commands
+        clean_cmd = [
+            'nextflow', 
+            'clean', 
+            '-f'  # Force removal without prompting
+        ]
+        
+        try:
+            # Run installation
+            self.logger.info(f"{TerminalColors.YELLOW}Starting database installation...{TerminalColors.RESET}")
+            
+            # Use subprocess.Popen for real-time output
+            install_process = subprocess.Popen(
+                install_cmd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            
+            # Capture and log output in real-time (only if verbose)
+            while True:
+                output = install_process.stdout.readline()
+                if output == '' and install_process.poll() is not None:
+                    break
+                if output:
+                    output = output.strip()
+                    if self.verbose:
+                        print(output)  # Print to console only in verbose mode
+                    self.logger.info(output)  # Always log to file
+            
+            # Check return code
+            if install_process.returncode != 0:
+                raise subprocess.CalledProcessError(
+                    install_process.returncode, 
+                    install_cmd, 
+                    output
+                )
+            
+            # Log installation success
+            self.logger.info(
+                f"{TerminalColors.GREEN}Database installation successful!{TerminalColors.RESET}"
+            )
+            
+            # Run cache and work directory cleanup
+            try:
+                # Remove Nextflow cache
+                clean_process = subprocess.Popen(
+                    clean_cmd, 
+                    stdout=subprocess.PIPE, 
+                    stderr=subprocess.STDOUT, 
+                    text=True,
+                    bufsize=1,
+                    universal_newlines=True
+                )
+                
+                # Capture cleanup output
+                while True:
+                    output = clean_process.stdout.readline()
+                    if output == '' and clean_process.poll() is not None:
+                        break
+                    if output:
+                        output = output.strip()
+                        if self.verbose:
+                            print(output)
+                        self.logger.info(output)
+                
+                # Remove work directory
+                work_dir = os.path.join(self._resolve_project_dir(), 'work')
+                if os.path.exists(work_dir):
+                    shutil.rmtree(work_dir)
+                    self.logger.info(
+                        f"{TerminalColors.GREEN}Nextflow work directory removed successfully!{TerminalColors.RESET}"
+                    )
+                
+            except Exception as clean_error:
+                # Log cleanup error, but don't stop the entire process
+                self.logger.warning(
+                    f"{TerminalColors.YELLOW}Failed to clean directories: {clean_error}{TerminalColors.RESET}"
+                )
+        
+        except subprocess.CalledProcessError as e:
+            self.logger.error(
+                f"{TerminalColors.RED}Installation failed: {e}{TerminalColors.RESET}"
+            )
+            sys.exit(1)
+
+    def _resolve_project_dir(self):
+        """
+        Resolve the project directory based on the current script location
+        """
+        return os.path.dirname(os.path.abspath(sys.argv[0]))
+        
+    def run(self):
+        """
+        Main installation workflow
+        """
+        # Validate Nextflow installation
+        self._validate_nextflow_installation()
+        
+        # Check disk space for both locations
+        self._check_disk_space([self.db_location, self.conda_cache_dir])
+        
+        # Prepare directories
+        self._prepare_directories()
+        
+        # Run installation
+        self._run_nextflow_install()
+
+def main():
+    # Create the top-level parser
+    parser = argparse.ArgumentParser(description='Phorager: Nextflow Pipeline Database Installer')
+    
+    # Create subparsers
+    subparsers = parser.add_subparsers(dest='command', help='Subcommands')
+    
+    # Install subcommand
+    install_parser = subparsers.add_parser('install', help='Install databases')
+    install_parser.add_argument(
+        '--db-location', 
+        help='Custom database installation location'
+    )
+    install_parser.add_argument(
+        '--conda-cache', 
+        help='Custom conda cache directory'
+    )
+    install_parser.add_argument(
+        '--force', 
+        action='store_true', 
+        help='Force reinstall all databases'
+    )
+    install_parser.add_argument(
+        '--verbose', 
+        action='store_true', 
+        help='Enable verbose logging'
+    )
+    
+    # Parse arguments
+    args = parser.parse_args()
+    
+    # Check if a subcommand was provided
+    if args.command is None:
+        parser.print_help()
+        sys.exit(1)
+    
+    # Run install workflow
+    if args.command == 'install':
+        installer = PhoragerInstaller(
+            db_location=args.db_location,
+            conda_cache_dir=args.conda_cache,
+            force_reinstall=args.force, 
+            verbose=args.verbose
+        )
+        installer.run()
+
+if __name__ == '__main__':
+    main()
+
