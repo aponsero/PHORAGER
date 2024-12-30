@@ -102,13 +102,21 @@ cd [repository-name]
 
 # Setup wrapper script (optional but recommended)
 chmod +x phorager
-chmod +x lib/*.sh
 ```
 
 2. Install required databases and tools:
 ```bash
-# Using the wrapper script (recommended)
+# Basic installation
 ./phorager install
+
+# Verbose mode (shows detailed Nextflow output)
+./phorager install --verbose
+
+# Force reinstall databases (overwrite existing installations)
+./phorager install --force
+
+# Combine verbose and force reinstall
+./phorager install --verbose --force
 
 # Or using Nextflow directly
 nextflow run main.nf --workflow install
@@ -192,6 +200,30 @@ conda env list | grep -E 'checkm2|drep|genomad|vibrant|checkv|pharokka|phold'
 Expected output should show:
 1. Populated database directories for each tool
 2. Created conda environments with correct versions
+
+#### Installation Options
+- **Default Mode**: Silently installs databases, logs output to file
+- **Verbose Mode (`--verbose`)**: 
+  - Displays detailed Nextflow installation messages in real-time
+  - Provides transparency about installation progress
+- **Force Reinstall (`--force`)**: 
+  - Forces reinstallation of databases
+  - Useful for updating or fixing corrupted database installations
+
+#### Logging
+- Log files are automatically generated in `phorager_logs/`
+- Log filename format: `install_YYYYMMDD_HHMMSS.log`
+- Logs contain:
+  - Detailed Nextflow installation output
+  - Installation progress messages
+  - Error details (if any)
+- Logs are created regardless of verbose mode
+
+Example log location:
+```bash
+# View recent installation log
+cat phorager_logs/install_20241229_200747.log
+```
 
 ## Bacterial Workflow
 
