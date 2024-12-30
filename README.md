@@ -12,13 +12,13 @@ Quality assessment and dereplication of bacterial genomes using:
 ### 2. Prophage Detection (`phorager prophage` or `--workflow prophage`)
 Identification and extraction of prophage sequences using complementary approaches:
 - **geNomad**: Machine learning-based viral sequence detection
-- **VIBRANT**: Neural network-based virus identification
+- **VIBRANT**: Machine learning-based viral sequence detection
 
 ### 3. Prophage Annotation (`phorager annotation` or `--workflow annotation`)
 Multi-level characterization of prophage sequences:
 - **CheckV**: Quality assessment of viral sequences
 - **Pharokka**: Specialized phage genome annotation
-- **PHOLD**: Host-interaction and defense system prediction
+- **PHOLD**: Specialized phage genome annotation
 - **Clustering**: Sequence-based clustering to identify unique viral populations
 
 ## Pipeline Features
@@ -28,7 +28,6 @@ Multi-level characterization of prophage sequences:
 - **Quality Control**: Multiple filtering steps to ensure high-quality predictions
 - **Comprehensive Analysis**: From genome QC to detailed prophage characterization
 - **Reproducibility**: Conda environment management for consistent tool versions
-- **Scalability**: Suitable for both single genomes and large datasets
 - **User-Friendly Interface**: Command-line wrapper script for easy execution
 
 ## Quick Start
