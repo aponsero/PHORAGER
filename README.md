@@ -256,18 +256,19 @@ nextflow run main.nf --workflow bacterial --genome /path/to/genomes
 - Accepts either:
   - A directory containing multiple genome files
   - A single genome file
-- Assemblies should be reasonably complete (recommended N50 > 50kb)
 
 #### Parameters
 
 | Parameter | Description | Default | Wrapper Usage | Nextflow Usage |
 |-----------|-------------|---------|---------------|----------------|
 | `--genome` | Input genome file or directory | `$projectDir/data/genome.fa` | `--genome /path/to/genomes` | `--genome /path/to/genomes` |
-| `--completeness_threshold` | Minimum genome completeness (%) | 95 | `--completeness_threshold 90` | `--completeness_threshold 90` |
-| `--contamination_threshold` | Maximum contamination allowed (%) | 5 | `--contamination_threshold 10` | `--contamination_threshold 10` |
-| `--drep_ani_threshold` | ANI threshold for dereplication | 0.999 | `--drep_ani_threshold 0.95` | `--drep_ani_threshold 0.95` |
-| `--conda_cache` | Path to conda environment directory | `$HOME/phorager/conda_cache` | `--conda_cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
-| `--db_location` | Path to database directory | `$HOME/phorager/databases` | `--db_location /path/to/db` | `--global_db_location /path/to/db` |
+| `--completeness_threshold` | Minimum genome completeness (%) | 95 | `--completeness-threshold 90` | `--completeness_threshold 90` |
+| `--contamination_threshold` | Maximum contamination allowed (%) | 5 | `--contamination-threshold 10` | `--contamination_threshold 10` |
+| `--drep_ani_threshold` | ANI threshold for dereplication | 0.999 | `--drep-ani-threshold 0.95` | `--drep_ani_threshold 0.95` |
+| `--conda_cache` | Path to conda environment directory | `$projectDir/conda_cache` | `--conda-cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
+| `--db_location` | Path to database directory | `$projectDir/databases` | `--db-location /path/to/db` | `--global_db_location /path/to/db` |
+| `--outdir` | Output directory | `$projectDir/results` | `--outdir /path/to/output` | `--outdir /path/to/output` |
+| `--threads` | Number of threads to use | All available cores | `--threads 4` | `--threads 4` |
 
 ### Output Structure
 
@@ -330,8 +331,8 @@ nextflow run main.nf --workflow bacterial \
 # Using the wrapper script
 ./phorager bacterial \
     --genome /path/to/genomes \
-    --completeness_threshold 90 \
-    --contamination_threshold 10
+    --completeness-threshold 90 \
+    --contamination-threshold 10
 
 # Or using Nextflow directly
 nextflow run main.nf --workflow bacterial \
@@ -345,7 +346,7 @@ nextflow run main.nf --workflow bacterial \
 # Using the wrapper script
 ./phorager bacterial \
     --genome /path/to/genomes \
-    --drep_ani_threshold 0.95
+    --drep-ani-threshold 0.95
 
 # Or using Nextflow directly
 nextflow run main.nf --workflow bacterial \
@@ -366,19 +367,23 @@ nextflow run main.nf -resume \
     --genome /path/to/genomes
 ```
 
-5. Custom database and conda locations:
+5. Custom database, conda, and output locations:
 ```bash
 # Using the wrapper script
 ./phorager bacterial \
     --genome /path/to/genomes \
-    --conda_cache /path/to/conda \
-    --db_location /path/to/databases
+    --conda-cache /path/to/conda \
+    --db-location /path/to/databases \
+    --outdir /path/to/output \
+    --threads 4
 
 # Or using Nextflow directly
 nextflow run main.nf --workflow bacterial \
     --genome /path/to/genomes \
     --conda_cache_dir /path/to/conda \
-    --global_db_location /path/to/databases
+    --global_db_location /path/to/databases \
+    --outdir /path/to/output \
+    --threads 4
 ```
 
 ## Prophage Workflow
