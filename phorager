@@ -9,6 +9,7 @@ import logging
 import subprocess
 from datetime import datetime
 from pathlib import Path
+import multiprocessing
 
 class TerminalColors:
     GREEN = '\033[92m'
@@ -41,22 +42,122 @@ class NextflowConfigParser:
         # Replace $projectDir with the actual project directory path
         config_content = config_content.replace('$projectDir', project_dir)
 
-        # Extract database location
+        # Existing parsing methods...
+
+        return {
+            'db_location': NextflowConfigParser.parse_db_location(config_content),
+            'conda_cache_dir': NextflowConfigParser.parse_conda_cache(config_content),
+            'genome': NextflowConfigParser.parse_genome(config_content),
+            'completeness_threshold': NextflowConfigParser.parse_completeness_threshold(config_content),
+            'contamination_threshold': NextflowConfigParser.parse_contamination_threshold(config_content),
+            'drep_ani_threshold': NextflowConfigParser.parse_drep_ani_threshold(config_content),
+            'outdir': NextflowConfigParser._parse_outdir(config_content)
+        }
+
+    @staticmethod
+    def _parse_threads(config_content):
+        """
+        Parse default threads from config content
+        Defaults to number of available CPU cores if not specified
+        """
+        try:
+            threads_match = re.search(r'threads\s*=\s*Runtime\.runtime\.availableProcessors\(\)', config_content)
+            if threads_match:
+                return multiprocessing.cpu_count()
+            
+            # Alternative parsing if explicit number is used
+            threads_num_match = re.search(r'threads\s*=\s*(\d+)', config_content)
+            if threads_num_match:
+                return int(threads_num_match.group(1))
+            
+            # Default to all available cores if no specification found
+            return multiprocessing.cpu_count()
+        except Exception:
+            # Fallback to all available cores
+            return multiprocessing.cpu_count()
+
+    @staticmethod
+    def parse_db_location(config_content):
+        """
+        Parse global database location from config content
+        """
         db_match = re.search(r'global_db_location\s*=\s*"([^"]+)"', config_content)
         db_location = db_match.group(1) if db_match else None
 
-        # Extract conda cache directory
+        if not db_location:
+            raise ValueError("Could not parse database location from config")
+
+        return os.path.expandvars(os.path.expanduser(db_location))
+
+    @staticmethod
+    def parse_conda_cache(config_content):
+        """
+        Parse conda cache directory from config content
+        """
         cache_match = re.search(r'conda_cache_dir\s*=\s*"([^"]+)"', config_content)
         conda_cache_dir = cache_match.group(1) if cache_match else None
 
-        if not db_location or not conda_cache_dir:
-            raise ValueError("Could not parse database location or conda cache directory from config")
+        if not conda_cache_dir:
+            raise ValueError("Could not parse conda cache directory from config")
 
-        return {
-            'db_location': os.path.expandvars(os.path.expanduser(db_location)),
-            'conda_cache_dir': os.path.expandvars(os.path.expanduser(conda_cache_dir))
-        }
+        return os.path.expandvars(os.path.expanduser(conda_cache_dir))
 
+    @staticmethod
+    def parse_genome(config_content):
+        """
+        Parse genome location from config content
+        """
+        genome_match = re.search(r'genome\s*=\s*"([^"]+)"', config_content)
+        genome = genome_match.group(1) if genome_match else None
+
+        if not genome:
+            raise ValueError("Could not parse genome location from config")
+
+        return os.path.expandvars(os.path.expanduser(genome))
+
+    @staticmethod
+    def parse_completeness_threshold(config_content):
+        """
+        Parse completeness threshold from config content
+        """
+        threshold_match = re.search(r'completeness_threshold\s*=\s*(\d+\.?\d*)', config_content)
+        threshold = float(threshold_match.group(1)) if threshold_match else 95.0
+
+        return threshold
+
+    @staticmethod
+    def parse_contamination_threshold(config_content):
+        """
+        Parse contamination threshold from config content
+        """
+        threshold_match = re.search(r'contamination_threshold\s*=\s*(\d+\.?\d*)', config_content)
+        threshold = float(threshold_match.group(1)) if threshold_match else 5.0
+
+        return threshold
+
+    @staticmethod
+    def parse_drep_ani_threshold(config_content):
+        """
+        Parse dRep ANI threshold from config content
+        """
+        threshold_match = re.search(r'drep_ani_threshold\s*=\s*(\d+\.?\d*)', config_content)
+        threshold = float(threshold_match.group(1)) if threshold_match else 0.999
+
+        return threshold
+
+    @staticmethod
+    def _parse_outdir(config_content):
+        """
+        Parse output directory from config content
+        """
+        outdir_match = re.search(r'outdir\s*=\s*"([^"]+)"', config_content)
+        outdir = outdir_match.group(1) if outdir_match else "$projectDir/results"
+        
+        # Expand project directory and user home
+        outdir = os.path.expandvars(os.path.expanduser(outdir))
+        
+        return outdir
+    
 class PhoragerInstaller:
     def __init__(self, 
                  db_location=None, 
@@ -315,9 +416,343 @@ class PhoragerInstaller:
             # Run installation
             self._run_nextflow_install()
 
+class BacterialWorkflowValidator:
+    @staticmethod
+    def validate_threads(threads):
+        """
+        Validate thread count:
+        - Must be a positive integer
+        - Cannot exceed available system cores
+        """
+        try:
+            threads = int(threads)
+            max_cores = multiprocessing.cpu_count()
+            
+            if threads < 1:
+                raise ValueError("Thread count must be a positive integer")
+            
+            if threads > max_cores:
+                print(f"Warning: Requested threads ({threads}) exceeds available cores ({max_cores}). Using {max_cores} cores.")
+                return max_cores
+            
+            return threads
+        except ValueError:
+            raise ValueError(f"Invalid thread count: {threads}. Must be a positive integer.")
+
+    @staticmethod
+    def validate_database_location(db_location):
+        """
+        Validate database location:
+        - Must exist
+        - Must be a directory
+        """
+        if not os.path.exists(db_location):
+            raise ValueError(f"Database location does not exist: {db_location}")
+        
+        if not os.path.isdir(db_location):
+            raise ValueError(f"Database location is not a directory: {db_location}")
+        
+        return db_location
+
+    @staticmethod
+    def validate_percentage_threshold(value, name):
+        """
+        Validate percentage thresholds:
+        - Must be between 0 and 100
+        """
+        try:
+            float_value = float(value)
+            if float_value < 0 or float_value > 100:
+                raise ValueError(f"{name} must be between 0 and 100")
+            return float_value
+        except ValueError:
+            raise ValueError(f"Invalid {name}: {value}. Must be a number between 0 and 100.")
+
+    @staticmethod
+    def validate_ani_threshold(value):
+        """
+        Validate ANI threshold:
+        - Must be between 0 and 1
+        """
+        try:
+            float_value = float(value)
+            if float_value < 0 or float_value > 1:
+                raise ValueError("ANI threshold must be between 0 and 1")
+            return float_value
+        except ValueError:
+            raise ValueError(f"Invalid ANI threshold: {value}. Must be a number between 0 and 1.")
+
+    @staticmethod
+    def validate_genome(genome_path):
+        """
+        Validate genome input:
+        - Must be a file with .fa, .fasta, or .fna extension
+        - Or a directory containing files with .fa, .fasta, or .fna extensions
+        """
+        if not os.path.exists(genome_path):
+            raise ValueError(f"Genome path does not exist: {genome_path}")
+        
+        if os.path.isfile(genome_path):
+            # Check file extension
+            if not any(genome_path.endswith(ext) for ext in ['.fa', '.fasta', '.fna']):
+                raise ValueError(f"Invalid genome file. Must end with .fa, .fasta, or .fna: {genome_path}")
+            return genome_path
+        
+        if os.path.isdir(genome_path):
+            # Check directory contains valid genome files
+            genome_files = [
+                f for f in os.listdir(genome_path) 
+                if any(f.endswith(ext) for ext in ['.fa', '.fasta', '.fna'])
+            ]
+            
+            if not genome_files:
+                raise ValueError(f"No genome files found in directory. Files must end with .fa, .fasta, or .fna: {genome_path}")
+            
+            return genome_path
+        
+        raise ValueError(f"Invalid genome path: {genome_path}")
+    
+    @staticmethod
+    def validate_directory(directory_path):
+        """
+        Validate directory:
+        - Must exist
+        - Must be a directory
+        """
+        if not os.path.exists(directory_path):
+            raise ValueError(f"Directory does not exist: {directory_path}")
+        
+        if not os.path.isdir(directory_path):
+            raise ValueError(f"Path is not a directory: {directory_path}")
+        
+        return directory_path
+    
+    @staticmethod
+    def validate_output_directory(outdir):
+        """
+        Validate output directory:
+        - If directory doesn't exist, create it
+        - If it exists, print a warning
+        """
+        outdir = os.path.abspath(os.path.expanduser(outdir))
+        
+        if not os.path.exists(outdir):
+            try:
+                os.makedirs(outdir)
+                print(f"Created output directory: {outdir}")
+            except Exception as e:
+                raise ValueError(f"Could not create output directory: {outdir}. Error: {e}")
+        else:
+            print(f"Warning: Using existing output directory: {outdir}")
+        
+        return outdir
+
+class PhoragerBacterial:
+    def __init__(self, 
+             genome=None, 
+             db_location=None, 
+             conda_cache_dir=None,
+             outdir=None,
+             threads=None, 
+             completeness_threshold=None, 
+             contamination_threshold=None, 
+             drep_ani_threshold=None,
+             verbose=False,
+             force=False):
+    
+        # Parse configuration
+        config = NextflowConfigParser.parse_config()
+        
+        # Validate and set genome
+        self.genome = BacterialWorkflowValidator.validate_genome(
+            genome if genome is not None else config['genome']
+        )
+        
+        # Validate and set database location
+        self.db_location = BacterialWorkflowValidator.validate_database_location(
+            db_location if db_location is not None else config['db_location']
+        )
+        
+        # Validate and set conda cache directory
+        self.conda_cache_dir = BacterialWorkflowValidator.validate_directory(
+            conda_cache_dir if conda_cache_dir is not None else config['conda_cache_dir']
+        )
+
+        # Validate and set output directory
+        self.outdir = BacterialWorkflowValidator.validate_output_directory(
+            outdir if outdir is not None else config['outdir']
+        )
+
+        # Validate and set threads
+        try:
+            self.threads = BacterialWorkflowValidator.validate_threads(
+                threads if threads is not None else config.get('threads', multiprocessing.cpu_count())
+            )
+        except KeyError:
+            self.threads = BacterialWorkflowValidator.validate_threads(multiprocessing.cpu_count())
+                
+        # Validate and set completeness threshold
+        self.completeness_threshold = BacterialWorkflowValidator.validate_percentage_threshold(
+            completeness_threshold if completeness_threshold is not None else config['completeness_threshold'],
+            'Completeness threshold'
+        )
+        
+        # Validate and set contamination threshold
+        self.contamination_threshold = BacterialWorkflowValidator.validate_percentage_threshold(
+            contamination_threshold if contamination_threshold is not None else config['contamination_threshold'],
+            'Contamination threshold'
+        )
+        
+        # Validate and set dRep ANI threshold
+        self.drep_ani_threshold = BacterialWorkflowValidator.validate_ani_threshold(
+            drep_ani_threshold if drep_ani_threshold is not None else config['drep_ani_threshold']
+        )
+        
+        # Set verbose and force flags
+        self.verbose = verbose
+        self.force = force
+        
+        # Setup logging
+        self._setup_logging()
+
+    def _setup_logging(self):
+        """
+        Configure logging with file and console output
+        """
+        # Create logs directory if it doesn't exist
+        log_dir = Path('./phorager_logs')
+        log_dir.mkdir(exist_ok=True)
+        
+        # Generate log filename with timestamp
+        log_filename = log_dir / f"bacterial_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        
+        # Configure logging
+        logging.basicConfig(
+            level=logging.DEBUG if self.verbose else logging.INFO,
+            format='%(asctime)s - %(levelname)s: %(message)s',
+            handlers=[
+                logging.FileHandler(log_filename),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+        
+        # Log the parameters being used
+        self.logger.info(f"Genome: {self.genome}")
+        self.logger.info(f"Database Location: {self.db_location}")
+        self.logger.info(f"Threads: {self.threads}")
+        self.logger.info(f"Completeness Threshold: {self.completeness_threshold}")
+        self.logger.info(f"Contamination Threshold: {self.contamination_threshold}")
+        self.logger.info(f"dRep ANI Threshold: {self.drep_ani_threshold}")
+    
+    def _run_nextflow_bacterial(self):
+        """
+        Run Nextflow bacterial workflow with comprehensive output handling
+        """
+        # Construct Nextflow command with validated parameters
+        cmd = [
+            'nextflow', 
+            'run', 
+            'main.nf', 
+            '-profile', 'conda',
+            '--workflow', 'bacterial',
+            f'--genome', self.genome,
+            f'--global_db_location', self.db_location,
+            f'--outdir', self.outdir,
+            f'--conda_cache_dir', self.conda_cache_dir,
+            f'--threads', str(self.threads),
+            f'--completeness_threshold', str(self.completeness_threshold),
+            f'--contamination_threshold', str(self.contamination_threshold),
+            f'--drep_ani_threshold', str(self.drep_ani_threshold)
+        ]
+        
+        try:
+            # Run installation with real-time output handling
+            self.logger.info(f"Starting bacterial workflow...")
+            
+            # Use subprocess.Popen for real-time output
+            process = subprocess.Popen(
+                cmd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            
+            # Capture and log output in real-time
+            output_lines = []
+            while True:
+                output = process.stdout.readline()
+                if output == '' and process.poll() is not None:
+                    break
+                if output:
+                    output = output.strip()
+                    output_lines.append(output)
+                    
+                    # Log all output
+                    self.logger.info(output)
+                    
+                    # Print to console if verbose
+                    if self.verbose:
+                        print(output)
+            
+            # Check return code
+            if process.returncode != 0:
+                raise subprocess.CalledProcessError(
+                    process.returncode, 
+                    cmd, 
+                    '\n'.join(output_lines)
+                )
+            
+            # Run cache and work directory cleanup
+            try:
+                # Nextflow clean command
+                clean_cmd = ['nextflow', 'clean', '-f']
+                subprocess.run(clean_cmd, check=True, capture_output=not self.verbose, text=True)
+                
+                # Remove work directory
+                work_dir = os.path.join(self._resolve_project_dir(), 'work')
+                if os.path.exists(work_dir):
+                    shutil.rmtree(work_dir)
+                    
+                    # Log and print work directory removal
+                    rm_message = f"Nextflow work directory removed successfully!"
+                    self.logger.info(rm_message)
+                    print(rm_message)
+                
+            except Exception as clean_error:
+                # Log cleanup error
+                error_message = f"Failed to clean directories: {clean_error}"
+                self.logger.warning(error_message)
+                print(error_message)
+            
+            # Log and print success message
+            success_message = f"Bacterial workflow completed successfully!"
+            self.logger.info(success_message)
+            print(success_message)
+        
+        except subprocess.CalledProcessError as e:
+            error_message = f"Bacterial workflow failed: {e}"
+            self.logger.error(error_message)
+            print(error_message)
+            sys.exit(1)
+
+    def _resolve_project_dir(self):
+        """
+        Resolve the project directory based on the current script location
+        """
+        return os.path.dirname(os.path.abspath(sys.argv[0]))
+ 
+    def run(self):
+        """
+        Main workflow execution
+        """
+        self._run_nextflow_bacterial()
+
 def main():
     # Create the top-level parser
-    parser = argparse.ArgumentParser(description='Phorager: Nextflow Pipeline Database Installer')
+    parser = argparse.ArgumentParser(description='Phorager: Nextflow Pipeline Database Installer and Workflow Runner')
     
     # Create subparsers
     subparsers = parser.add_subparsers(dest='command', help='Subcommands')
@@ -343,6 +778,19 @@ def main():
         help='Enable verbose logging'
     )
     
+    # Bacterial subcommand
+    bacterial_parser = subparsers.add_parser('bacterial', help='Run bacterial workflow')
+    bacterial_parser.add_argument('--genome', help='Path to genome file or directory')
+    bacterial_parser.add_argument('--db-location', help='Database location')
+    bacterial_parser.add_argument('--outdir', help='Output directory')
+    bacterial_parser.add_argument('--conda-cache', help='Conda cache directory location')
+    bacterial_parser.add_argument('--threads', type=int, help='Number of threads')
+    bacterial_parser.add_argument('--completeness-threshold', type=float, help='Completeness threshold')
+    bacterial_parser.add_argument('--contamination-threshold', type=float, help='Contamination threshold')
+    bacterial_parser.add_argument('--drep-ani-threshold', type=float, help='dRep ANI threshold')
+    bacterial_parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
+    bacterial_parser.add_argument('--force', action='store_true', help='Force overwrite')
+    
     # Parse arguments
     args = parser.parse_args()
     
@@ -360,7 +808,26 @@ def main():
             verbose=args.verbose
         )
         installer.run()
+    
+    # Run bacterial workflow
+    elif args.command == 'bacterial':
+        try:
+            workflow = PhoragerBacterial(
+                genome=args.genome,
+                db_location=args.db_location,
+                conda_cache_dir=args.conda_cache,
+                outdir=args.outdir,
+                threads=args.threads,
+                completeness_threshold=args.completeness_threshold,
+                contamination_threshold=args.contamination_threshold,
+                drep_ani_threshold=args.drep_ani_threshold,
+                verbose=args.verbose,
+                force=args.force
+            )
+            workflow.run()
+        except Exception as e:
+            print(f"Error: {e}")
+            sys.exit(1)
 
 if __name__ == '__main__':
     main()
-

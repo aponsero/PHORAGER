@@ -5,6 +5,7 @@ process CHECKM2 {
     input:
     path genome
     path checkm2_db
+    val threads
 
     output:
     path "checkm2_output", emit: dir
@@ -21,7 +22,7 @@ process CHECKM2 {
     cp -r ${genome} input_genomes/
 
     # Run CheckM2
-    checkm2 predict --threads ${task.cpus} --input input_genomes --output-directory checkm2_output --force
+    checkm2 predict --threads ${threads} --input input_genomes --output-directory checkm2_output --force
 
     # Move the quality report to the current directory
     mv checkm2_output/quality_report.tsv .
