@@ -9,7 +9,9 @@
   [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
   A comprehensive pipeline for bacterial genome quality control, prophage detection, and prophage characterization
+</div>
 
+<div align="left">
   **Authors:**  
   - Xena Dyball
   - James Docherty
@@ -17,7 +19,8 @@
   - Ryan Cook
 
   **Citation:**  
-  [Your Paper Citation or Preprint Link]
+  [Paper Citation or Preprint Link]
+
 </div>
 
 ## Overview
