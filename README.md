@@ -4,6 +4,9 @@
 
 This Nextflow pipeline provides a comprehensive suite of tools for bacterial genome quality control, prophage detection, and prophage characterization. The pipeline is organized into three main workflows:
 
+### 0. **Installation** (`phorager install`)
+- Download and setup required databases and conda environment
+
 ### 1. Bacterial Genome Quality Control (`phorager bacterial` or `--workflow bacterial`)
 Quality assessment and dereplication of bacterial genomes using:
 - **CheckM2**: Evaluates genome completeness and contamination
@@ -20,6 +23,9 @@ Multi-level characterization of prophage sequences:
 - **Pharokka**: Specialized phage genome annotation
 - **PHOLD**: Specialized phage genome annotation
 - **Clustering**: Sequence-based clustering to identify unique viral populations
+
+### 4. End-to-End Analysis (`phorager run`)
+   - Automatically execute entire pipeline from genome preprocessing to prophage annotation
 
 ## Pipeline Features
 
@@ -45,6 +51,9 @@ Using the wrapper script (recommended):
 
 # Prophage annotation
 ./phorager annotation
+
+# Complete end-to-end analysis
+./phorager run --genome /path/to/genomes
 ```
 
 Using Nextflow directly:
@@ -580,7 +589,7 @@ nextflow run main.nf --workflow prophage \
 Basic usage:
 ```bash
 # Using the wrapper script (recommended)
-./phorager annotation
+./phorager annotation --prophage_fasta /path/to/prophages.fasta
 
 # Or using Nextflow directly
 nextflow run main.nf --workflow annotation
@@ -663,7 +672,7 @@ results/
 1. Basic run with prophage workflow output:
 ```bash
 # Using the wrapper script
-./phorager annotation
+./phorager annotation --prophage_fasta /path/to/prophages.fasta
 
 # Or using Nextflow directly
 nextflow run main.nf --workflow annotation
@@ -736,6 +745,59 @@ nextflow run main.nf --workflow annotation \
 nextflow run main.nf --workflow annotation \
     --conda_cache_dir /path/to/conda \
     --global_db_location /path/to/databases
+```
+
+## End-to-End Workflow
+
+### Overview
+The `phorager run` command provides the possibility to run the bacterial genome analysis, prophage detection, and annotation in a single command.
+
+### Parameters
+
+#### Bacterial Workflow Parameters
+- `--genome`: Input genome file or directory (Required)
+- `--completeness-threshold`: Minimum genome completeness (%)
+- `--contamination-threshold`: Maximum contamination allowed (%)
+- `--drep-ani-threshold`: ANI threshold for dereplication
+
+#### Prophage Workflow Parameters
+- `--skip-genomad`: Skip geNomad detection step
+- `--skip-vibrant`: Skip VIBRANT detection step
+- `--use-dereplicated-genomes`: Use dereplicated genomes from bacterial workflow
+
+#### Annotation Workflow Parameters
+- `--min-prophage-length`: Minimum prophage sequence length
+- `--skip-detailed-annotation`: Skip Pharokka and PHOLD annotation
+- `--checkv-quality-levels`: Acceptable CheckV quality levels
+- `--pharokka-structural-perc`: Minimum % structural genes (Pharokka)
+- `--pharokka-structural-total`: Minimum structural genes (Pharokka)
+- `--phold-structural-perc`: Minimum % structural genes (PHOLD)
+- `--phold-structural-total`: Minimum structural genes (PHOLD)
+- `--clustering-min-ani`: Minimum ANI for clustering
+- `--clustering-min-coverage`: Minimum coverage for clustering
+
+#### Common Parameters
+- `--db-location`: Path to database directory
+- `--conda-cache`: Path to conda environment directory
+- `--outdir`: Output directory
+- `--threads`: Number of threads to use
+- `--verbose`: Enable detailed output
+- `--force`: Force overwrite existing results
+
+### Example Commands
+
+1. Basic end-to-end analysis:
+```bash
+./phorager run --genome /path/to/genomes
+```
+
+2. Customized analysis:
+```bash
+./phorager run --genome /path/to/genomes \
+    --completeness-threshold 90 \
+    --skip-vibrant \
+    --min-prophage-length 4000 \
+    --clustering-min-ani 95.0
 ```
 
 
