@@ -1537,6 +1537,34 @@ def main():
     annotation_parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
     annotation_parser.add_argument('--force', action='store_true', help='Force overwrite')
 
+    # Add end-to-end subparser with ALL parameters from individual workflows
+    end_to_end_parser = subparsers.add_parser('run', help='Run entire prophage detection pipeline')
+    # Bacterial workflow parameters
+    end_to_end_parser.add_argument('--genome', help='Path to input genomes', required=True)
+    end_to_end_parser.add_argument('--db-location', help='Database location')
+    end_to_end_parser.add_argument('--conda-cache', help='Conda cache directory')
+    end_to_end_parser.add_argument('--threads', type=int, help='Number of threads')
+    end_to_end_parser.add_argument('--completeness-threshold', type=float, help='Minimum genome completeness')
+    end_to_end_parser.add_argument('--contamination-threshold', type=float, help='Maximum genome contamination')
+    end_to_end_parser.add_argument('--drep-ani-threshold', type=float, help='ANI threshold for dereplication')
+    # Prophage workflow parameters
+    end_to_end_parser.add_argument('--skip-genomad', action='store_true', help='Skip geNomad analysis')
+    end_to_end_parser.add_argument('--skip-vibrant', action='store_true', help='Skip VIBRANT analysis')
+    # Annotation workflow parameters
+    end_to_end_parser.add_argument('--min-prophage-length', type=int, help='Minimum prophage length')
+    end_to_end_parser.add_argument('--skip-detailed-annotation', action='store_true', help='Skip detailed annotation')
+    end_to_end_parser.add_argument('--annotation-filter-mode', help='Annotation filter mode')
+    end_to_end_parser.add_argument('--pharokka-structural-perc', type=float, help='Pharokka structural percentage')
+    end_to_end_parser.add_argument('--pharokka-structural-total', type=int, help='Pharokka structural total')
+    end_to_end_parser.add_argument('--phold-structural-perc', type=float, help='PHOLD structural percentage')
+    end_to_end_parser.add_argument('--phold-structural-total', type=int, help='PHOLD structural total')
+    end_to_end_parser.add_argument('--clustering-min-ani', type=float, help='Minimum ANI for clustering')
+    end_to_end_parser.add_argument('--clustering-min-coverage', type=float, help='Minimum coverage for clustering')
+    # Common parameters
+    end_to_end_parser.add_argument('--outdir', help='Output directory', default='results')
+    end_to_end_parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
+    end_to_end_parser.add_argument('--force', action='store_true', help='Force overwrite')
+
     # Parse arguments
     args = parser.parse_args()
     
@@ -1619,6 +1647,72 @@ def main():
             workflow.run()
         except Exception as e:
             print(f"Error: {e}")
+            sys.exit(1)
+
+    # End-to-end workflow
+    elif args.command == 'run':
+        try:
+            # Set output directory
+            os.makedirs(args.outdir, exist_ok=True)
+            
+            # 1. Bacterial Workflow
+            print("Starting Bacterial Workflow...")
+            bacterial_workflow = PhoragerBacterial(
+                genome=args.genome,
+                db_location=args.db_location,
+                conda_cache_dir=args.conda_cache,
+                outdir=args.outdir,
+                threads=args.threads,
+                completeness_threshold=args.completeness_threshold,
+                contamination_threshold=args.contamination_threshold,
+                drep_ani_threshold=args.drep_ani_threshold,
+                verbose=args.verbose,
+                force=args.force
+            )
+            bacterial_workflow.run()
+            
+            # 2. Prophage Workflow
+            print("Starting Prophage Workflow...")
+            prophage_workflow = PhoragerProphage(
+                genome=f"{args.outdir}/1.Genome_preprocessing/Bact3_dRep/drep_output/dereplicated_genomes",
+                use_dereplicated_genomes=True,
+                db_location=args.db_location,
+                conda_cache_dir=args.conda_cache,
+                outdir=args.outdir,
+                threads=args.threads,
+                skip_genomad=args.skip_genomad,
+                skip_vibrant=args.skip_vibrant,
+                verbose=args.verbose,
+                force=args.force
+            )
+            prophage_workflow.run()
+            
+            # 3. Annotation Workflow
+            print("Starting Annotation Workflow...")
+            annotation_workflow = PhoragerAnnotation(
+                prophage_fasta=f"{args.outdir}/2.Prophage_detection/All_prophage_sequences.fasta",
+                db_location=args.db_location,
+                conda_cache_dir=args.conda_cache,
+                outdir=args.outdir,
+                threads=args.threads,
+                min_prophage_length=args.min_prophage_length,
+                skip_detailed_annotation=args.skip_detailed_annotation,
+                annotation_filter_mode=args.annotation_filter_mode,
+                pharokka_structural_perc=args.pharokka_structural_perc,
+                pharokka_structural_total=args.pharokka_structural_total,
+                phold_structural_perc=args.phold_structural_perc,
+                phold_structural_total=args.phold_structural_total,
+                clustering_min_ani=args.clustering_min_ani,
+                clustering_min_coverage=args.clustering_min_coverage,
+                verbose=args.verbose,
+                force=args.force
+            )
+            annotation_workflow.run()
+            
+            print("End-to-end workflow completed successfully!")
+        
+        except Exception as e:
+            print(f"Workflow failed: {e}")
             sys.exit(1)
 
 if __name__ == '__main__':
