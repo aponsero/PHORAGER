@@ -18,6 +18,6 @@ process VIBRANT {
     script:
     """
     # Run VIBRANT
-    VIBRANT_run.py -i ${genome} -d ${vibrant_db}/databases -m ${vibrant_db}/files -no_plot -t 32
+    VIBRANT_run.py -i ${genome} -d ${vibrant_db}/databases/ -m ${vibrant_db}/files/ -no_plot -t 32
     """
 }

@@ -48,10 +48,16 @@ class NextflowConfigParser:
             'db_location': NextflowConfigParser.parse_db_location(config_content),
             'conda_cache_dir': NextflowConfigParser.parse_conda_cache(config_content),
             'genome': NextflowConfigParser.parse_genome(config_content),
+            'threads': NextflowConfigParser._parse_threads(config_content),
             'completeness_threshold': NextflowConfigParser.parse_completeness_threshold(config_content),
             'contamination_threshold': NextflowConfigParser.parse_contamination_threshold(config_content),
             'drep_ani_threshold': NextflowConfigParser.parse_drep_ani_threshold(config_content),
-            'outdir': NextflowConfigParser._parse_outdir(config_content)
+            'outdir': NextflowConfigParser._parse_outdir(config_content),
+            'use_dereplicated_genomes': NextflowConfigParser._parse_use_dereplicated_genomes(config_content),
+            'run_genomad': NextflowConfigParser._parse_run_genomad(config_content),
+            'run_vibrant': NextflowConfigParser._parse_run_vibrant(config_content),
+            'genomad_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'genomad'),
+            'vibrant_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'vibrant')
         }
 
     @staticmethod
@@ -158,6 +164,53 @@ class NextflowConfigParser:
         
         return outdir
     
+    @staticmethod
+    def _parse_use_dereplicated_genomes(config_content):
+        """
+        Parse use_dereplicated_genomes parameter
+        """
+        match = re.search(r'use_dereplicated_genomes\s*=\s*(\w+)', config_content)
+        return match.group(1).lower() == 'true' if match else False
+
+    @staticmethod
+    def _parse_run_genomad(config_content):
+        """
+        Parse run_genomad parameter
+        """
+        match = re.search(r'run_genomad\s*=\s*(\w+)', config_content)
+        print("MATCH:", match)
+        if match:
+            result = match.group(1).lower() == 'true'
+            print("RESULT:", result)
+            return result
+        return True  # Default to True if not specified
+
+    @staticmethod
+    def _parse_run_vibrant(config_content):
+        """
+        Parse run_vibrant parameter
+        """
+        match = re.search(r'run_vibrant\s*=\s*(\w+)', config_content)
+        print("MATCH:", match)
+        if match:
+            result = match.group(1).lower() == 'true'
+            print("RESULT:", result)
+            return result
+        return True  # Default to True if not specified
+
+    @staticmethod
+    def _parse_db_location_for_tool(config_content, tool):
+        """
+        Parse database location for a specific tool
+        """
+        match = re.search(rf'{tool}_db_location\s*=\s*"([^"]+)"', config_content)
+        db_location = match.group(1) if match else None
+        
+        if not db_location:
+            raise ValueError(f"Could not parse {tool} database location from config")
+        
+        return os.path.expandvars(os.path.expanduser(db_location))
+
 class PhoragerInstaller:
     def __init__(self, 
                  db_location=None, 
@@ -750,7 +803,230 @@ class PhoragerBacterial:
         """
         self._run_nextflow_bacterial()
 
-def main():
+class ProphageWorkflowValidator:
+    @staticmethod
+    def validate_genome(genome_path):
+        """
+        Validate genome input
+        - Must be a file or directory with .fa, .fasta, or .fna files
+        """
+        if not os.path.exists(genome_path):
+            raise ValueError(f"Genome path does not exist: {genome_path}")
+        
+        if os.path.isfile(genome_path):
+            if not any(genome_path.endswith(ext) for ext in ['.fa', '.fasta', '.fna']):
+                raise ValueError(f"Invalid genome file. Must end with .fa, .fasta, or .fna: {genome_path}")
+            return genome_path
+        
+        if os.path.isdir(genome_path):
+            genome_files = [
+                f for f in os.listdir(genome_path) 
+                if any(f.endswith(ext) for ext in ['.fa', '.fasta', '.fna'])
+            ]
+            
+            if not genome_files:
+                raise ValueError(f"No genome files found in directory. Files must end with .fa, .fasta, or .fna: {genome_path}")
+            
+            return genome_path
+        
+        raise ValueError(f"Invalid genome path: {genome_path}")
+
+    @staticmethod
+    def validate_database_location(db_location):
+        """
+        Validate database location
+        """
+        if not os.path.exists(db_location):
+            raise ValueError(f"Database location does not exist: {db_location}")
+        
+        if not os.path.isdir(db_location):
+            raise ValueError(f"Database location is not a directory: {db_location}")
+        
+        return db_location
+
+    @staticmethod
+    def validate_threads(threads):
+        """
+        Validate thread count
+        """
+        try:
+            threads = int(threads)
+            max_cores = multiprocessing.cpu_count()
+            
+            if threads < 1:
+                raise ValueError("Thread count must be a positive integer")
+            
+            if threads > max_cores:
+                print(f"Warning: Requested threads ({threads}) exceeds available cores ({max_cores}). Using {max_cores} cores.")
+                return max_cores
+            
+            return threads
+        except ValueError:
+            raise ValueError(f"Invalid thread count: {threads}. Must be a positive integer.")
+
+class PhoragerProphage:
+    def __init__(self, 
+                 genome=None,
+                 db_location=None,
+                 conda_cache_dir=None,
+                 outdir=None,
+                 threads=None,
+                 use_dereplicated_genomes=None,
+                 skip_genomad=None,
+                 skip_vibrant=None,
+                 verbose=False,
+                 force=False):
+        
+        # Parse configuration
+        config = NextflowConfigParser.parse_config()
+        
+        # Validate and set genome
+        self.genome = ProphageWorkflowValidator.validate_genome(
+            genome if genome is not None else config['genome']
+        )
+        
+        # Validate and set database location
+        self.db_location = ProphageWorkflowValidator.validate_database_location(
+            db_location if db_location is not None else config['db_location']
+        )
+        
+        # Validate and set conda cache directory
+        self.conda_cache_dir = ProphageWorkflowValidator.validate_database_location(
+            conda_cache_dir if conda_cache_dir is not None else config['conda_cache_dir']
+        )
+        
+        # Validate and set output directory
+        self.outdir = ProphageWorkflowValidator.validate_database_location(
+            outdir if outdir is not None else config['outdir']
+        )
+        
+        # Validate and set threads
+        self.threads = ProphageWorkflowValidator.validate_threads(
+            threads if threads is not None else config['threads']
+        )
+        
+        # Set boolean flags
+        self.use_dereplicated_genomes = True if use_dereplicated_genomes else config['use_dereplicated_genomes']
+        self.run_genomad = not (skip_genomad if skip_genomad is not None else False)
+        self.run_vibrant = not (skip_vibrant if skip_vibrant is not None else False)
+        
+        self.verbose = verbose
+        self.force = force
+        
+        # Setup logging
+        self._setup_logging()
+    
+    def _setup_logging(self):
+        """
+        Configure logging with file and console output
+        """
+        log_dir = Path('./phorager_logs')
+        log_dir.mkdir(exist_ok=True)
+        
+        log_filename = log_dir / f"prophage_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        
+        logging.basicConfig(
+            level=logging.DEBUG if self.verbose else logging.INFO,
+            format='%(asctime)s - %(levelname)s: %(message)s',
+            handlers=[
+                logging.FileHandler(log_filename),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+        
+        # Log parameters
+        self.logger.info(f"Genome: {self.genome}")
+        self.logger.info(f"Database Location: {self.db_location}")
+        self.logger.info(f"Threads: {self.threads}")
+        self.logger.info(f"Use Dereplicated Genomes: {self.use_dereplicated_genomes}")
+        self.logger.info(f"Run geNomad: {self.run_genomad}")
+        self.logger.info(f"Run VIBRANT: {self.run_vibrant}")
+    
+    def _run_nextflow_prophage(self):
+        """
+        Run Nextflow prophage workflow
+        """
+        cmd = [
+            'nextflow', 
+            'run', 
+            'main.nf', 
+            '-profile', 'conda',
+            '--workflow', 'prophage',
+            f'--genome', self.genome,
+            f'--global_db_location', self.db_location,
+            f'--conda_cache_dir', self.conda_cache_dir,
+            f'--outdir', self.outdir,
+            f'--threads', str(self.threads),
+            f'--use_dereplicated_genomes', str(self.use_dereplicated_genomes),
+            f'--run_genomad', str(self.run_genomad),
+            f'--run_vibrant', str(self.run_vibrant)
+        ]
+        
+        try:
+            self.logger.info("Starting prophage workflow...")
+            
+            process = subprocess.Popen(
+                cmd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            
+            output_lines = []
+            while True:
+                output = process.stdout.readline()
+                if output == '' and process.poll() is not None:
+                    break
+                if output:
+                    output = output.strip()
+                    output_lines.append(output)
+                    
+                    self.logger.info(output)
+                    
+                    if self.verbose:
+                        print(output)
+            
+            if process.returncode != 0:
+                raise subprocess.CalledProcessError(
+                    process.returncode, 
+                    cmd, 
+                    '\n'.join(output_lines)
+                )
+            
+            # Cleanup
+            clean_cmd = ['nextflow', 'clean', '-f']
+            subprocess.run(clean_cmd, check=True, capture_output=not self.verbose, text=True)
+            
+            work_dir = os.path.join(self._resolve_project_dir(), 'work')
+            if os.path.exists(work_dir):
+                shutil.rmtree(work_dir)
+            
+            success_message = "Prophage workflow completed successfully!"
+            self.logger.info(success_message)
+            print(success_message)
+        
+        except subprocess.CalledProcessError as e:
+            error_message = f"Prophage workflow failed: {e}"
+            self.logger.error(error_message)
+            print(error_message)
+            sys.exit(1)
+    
+    def _resolve_project_dir(self):
+        """
+        Resolve the project directory
+        """
+        return os.path.dirname(os.path.abspath(sys.argv[0]))
+    
+    def run(self):
+        """
+        Main workflow execution
+        """
+        self._run_nextflow_prophage()
+
+def main():    
     # Create the top-level parser
     parser = argparse.ArgumentParser(description='Phorager: Nextflow Pipeline Database Installer and Workflow Runner')
     
@@ -791,6 +1067,19 @@ def main():
     bacterial_parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
     bacterial_parser.add_argument('--force', action='store_true', help='Force overwrite')
     
+    # Prophage detection parser
+    prophage_parser = subparsers.add_parser('prophage', help='Run prophage workflow')
+    prophage_parser.add_argument('--genome', help='Path to genome file or directory')
+    prophage_parser.add_argument('--db-location', help='Database location')
+    prophage_parser.add_argument('--conda-cache', help='Conda cache directory location')
+    prophage_parser.add_argument('--outdir', help='Output directory')
+    prophage_parser.add_argument('--threads', type=int, help='Number of threads')
+    prophage_parser.add_argument('--use-dereplicated-genomes', action='store_true', help='Use dereplicated genomes')
+    prophage_parser.add_argument('--skip-genomad', action='store_true', help='Skip geNomad analysis')
+    prophage_parser.add_argument('--skip-vibrant', action='store_true', help='Skip VIBRANT analysis')
+    prophage_parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
+    prophage_parser.add_argument('--force', action='store_true', help='Force overwrite')
+
     # Parse arguments
     args = parser.parse_args()
     
@@ -821,6 +1110,26 @@ def main():
                 completeness_threshold=args.completeness_threshold,
                 contamination_threshold=args.contamination_threshold,
                 drep_ani_threshold=args.drep_ani_threshold,
+                verbose=args.verbose,
+                force=args.force
+            )
+            workflow.run()
+        except Exception as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+    
+    # Run Propgae workflow
+    elif args.command == 'prophage':
+        try:
+            workflow = PhoragerProphage(
+                genome=args.genome,
+                db_location=args.db_location,
+                conda_cache_dir=args.conda_cache,
+                outdir=args.outdir,
+                threads=args.threads,
+                use_dereplicated_genomes=args.use_dereplicated_genomes,
+                skip_genomad=args.skip_genomad,
+                skip_vibrant=args.skip_vibrant,
                 verbose=args.verbose,
                 force=args.force
             )

@@ -7,6 +7,7 @@ include { PROPHAGE_SUMMARY } from '../modules/prophage_summary'
 
 workflow prophage {
     main:
+
         // Input channel setup
         if (params.use_dereplicated_genomes) {
             def derep_dir = file("${params.outdir}/1.Genome_preprocessing/Bact3_dRep/drep_output/dereplicated_genomes")
@@ -35,6 +36,8 @@ workflow prophage {
         } else {
             genomad_coords = Channel.empty()
         }
+
+        log.info "DEBUG: vibrant database parameter: ${params.vibrant_db_location}"
 
         if (params.run_vibrant) {
             vibrant_db_ch = Channel.fromPath(params.vibrant_db_location, checkIfExists: true)
