@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="logo_phorager.png" alt="Phorager Logo" width="400"/>
+  <img src="phorager_logo.png" alt="Phorager Logo" width="400"/>
 
   # Phorager
   ### Prophage Analysis Pipeline
@@ -12,14 +12,16 @@
 </div>
 
 <div align="left">
-  **Authors:**  
-  - Xena Dyball
-  - James Docherty
-  - [Alise Ponsero](https://github.com/aponsero)
-  - Ryan Cook
 
-  **Citation:**  
-  [Paper Citation or Preprint Link]
+**Authors:**  
+
+- Xena Dyball
+- James Docherty
+- [Alise Ponsero](https://github.com/aponsero)
+- Ryan Cook
+
+**Citation:**
+[Paper Citation or Preprint Link]
 
 </div>
 
