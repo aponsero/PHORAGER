@@ -11,6 +11,7 @@ from datetime import datetime
 from pathlib import Path
 import multiprocessing
 
+## General classes
 class TerminalColors:
     GREEN = '\033[92m'
     YELLOW = '\033[93m'
@@ -57,7 +58,20 @@ class NextflowConfigParser:
             'run_genomad': NextflowConfigParser._parse_run_genomad(config_content),
             'run_vibrant': NextflowConfigParser._parse_run_vibrant(config_content),
             'genomad_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'genomad'),
-            'vibrant_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'vibrant')
+            'vibrant_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'vibrant'),
+            'checkv_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'checkv'),
+            'pharokka_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'pharokka'),
+            'phold_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'phold'),
+            'min_prophage_length': NextflowConfigParser._parse_min_prophage_length(config_content),
+            'checkv_quality_levels': NextflowConfigParser._parse_checkv_quality_levels(config_content),
+            'skip_detailed_annotation': NextflowConfigParser._parse_skip_detailed_annotation(config_content),
+            'annotation_filter_mode': NextflowConfigParser._parse_annotation_filter_mode(config_content),
+            'pharokka_structural_perc': NextflowConfigParser._parse_structural_params(config_content, 'pharokka')[0],
+            'pharokka_structural_total': NextflowConfigParser._parse_structural_params(config_content, 'pharokka')[1],
+            'phold_structural_perc': NextflowConfigParser._parse_structural_params(config_content, 'phold')[0],
+            'phold_structural_total': NextflowConfigParser._parse_structural_params(config_content, 'phold')[1],
+            'clustering_min_ani': NextflowConfigParser._parse_clustering_params(config_content)[0],
+            'clustering_min_coverage': NextflowConfigParser._parse_clustering_params(config_content)[1]
         }
 
     @staticmethod
@@ -211,6 +225,70 @@ class NextflowConfigParser:
         
         return os.path.expandvars(os.path.expanduser(db_location))
 
+    @staticmethod
+    def _parse_min_prophage_length(config_content):
+        """
+        Parse minimum prophage length from config content
+        """
+        match = re.search(r'min_prophage_length\s*=\s*(\d+)', config_content)
+        return int(match.group(1)) if match else 5000
+
+    @staticmethod
+    def _parse_checkv_quality_levels(config_content):
+        """
+        Parse CheckV quality levels from config content
+        """
+        match = re.search(r'checkv_quality_levels\s*=\s*\[(.*?)\]', config_content)
+        if match:
+            # Split and strip each quality level
+            quality_levels = [level.strip().strip("'\"") for level in match.group(1).split(',')]
+            return quality_levels
+        return ['Medium-quality', 'High-quality', 'Complete']
+
+    @staticmethod
+    def _parse_skip_detailed_annotation(config_content):
+        """
+        Parse skip detailed annotation flag from config content
+        """
+        match = re.search(r'skip_detailed_annotation\s*=\s*(\w+)', config_content)
+        return match.group(1).lower() == 'true' if match else False
+
+    @staticmethod
+    def _parse_annotation_filter_mode(config_content):
+        """
+        Parse annotation filter mode from config content
+        """
+        match = re.search(r'annotation_filter_mode\s*=\s*[\'"](\w+)[\'"]', config_content)
+        return match.group(1) if match else 'both'
+
+    @staticmethod
+    def _parse_structural_params(config_content, tool):
+        """
+        Parse structural parameters for Pharokka or PHOLD
+        """
+        perc_match = re.search(rf'{tool}_structural_perc\s*=\s*(\d+\.?\d*)', config_content)
+        total_match = re.search(rf'{tool}_structural_total\s*=\s*(\d+)', config_content)
+        
+        perc = float(perc_match.group(1)) if perc_match else 20.0
+        total = int(total_match.group(1)) if total_match else 3
+        
+        return perc, total
+
+    @staticmethod
+    def _parse_clustering_params(config_content):
+        """
+        Parse clustering parameters
+        """
+        ani_match = re.search(r'clustering_min_ani\s*=\s*(\d+\.?\d*)', config_content)
+        coverage_match = re.search(r'clustering_min_coverage\s*=\s*(\d+\.?\d*)', config_content)
+        
+        ani = float(ani_match.group(1)) if ani_match else 99.0
+        coverage = float(coverage_match.group(1)) if coverage_match else 85.0
+        
+        return ani, coverage
+
+## Sub-workflow classes
+## Installation
 class PhoragerInstaller:
     def __init__(self, 
                  db_location=None, 
@@ -469,6 +547,7 @@ class PhoragerInstaller:
             # Run installation
             self._run_nextflow_install()
 
+## Bacterial genome subworkflow
 class BacterialWorkflowValidator:
     @staticmethod
     def validate_threads(threads):
@@ -803,6 +882,7 @@ class PhoragerBacterial:
         """
         self._run_nextflow_bacterial()
 
+## Prophage detection subworkflow
 class ProphageWorkflowValidator:
     @staticmethod
     def validate_genome(genome_path):
@@ -1026,6 +1106,364 @@ class PhoragerProphage:
         """
         self._run_nextflow_prophage()
 
+## Prophage annotation subworkflow
+class AnnotationWorkflowValidator:
+    @staticmethod
+    def validate_prophage_fasta(prophage_fasta):
+        """
+        Validate prophage FASTA input
+        - Must be an existing file
+        - Must have .fasta, .fa, or .fna extension
+        """
+        if not os.path.exists(prophage_fasta):
+            raise ValueError(f"Prophage FASTA file does not exist: {prophage_fasta}")
+        
+        if not any(prophage_fasta.endswith(ext) for ext in ['.fasta', '.fa', '.fna']):
+            raise ValueError(f"Invalid file type. Must be .fasta, .fa, or .fna: {prophage_fasta}")
+        
+        return prophage_fasta
+
+    @staticmethod
+    def validate_database_location(db_location):
+        """
+        Validate database location
+        """
+        if not os.path.exists(db_location):
+            raise ValueError(f"Database location does not exist: {db_location}")
+        
+        if not os.path.isdir(db_location):
+            raise ValueError(f"Database location is not a directory: {db_location}")
+        
+        return db_location
+
+    @staticmethod
+    def validate_threads(threads):
+        """
+        Validate thread count
+        """
+        try:
+            threads = int(threads)
+            max_cores = multiprocessing.cpu_count()
+            
+            if threads < 1:
+                raise ValueError("Thread count must be a positive integer")
+            
+            if threads > max_cores:
+                print(f"Warning: Requested threads ({threads}) exceeds available cores ({max_cores}). Using {max_cores} cores.")
+                return max_cores
+            
+            return threads
+        except ValueError:
+            raise ValueError(f"Invalid thread count: {threads}. Must be a positive integer.")
+
+    @staticmethod
+    def validate_percentage(value, name):
+        """
+        Validate percentage values
+        """
+        try:
+            float_value = float(value)
+            if float_value < 0 or float_value > 100:
+                raise ValueError(f"{name} must be between 0 and 100")
+            return float_value
+        except ValueError:
+            raise ValueError(f"Invalid {name}: {value}. Must be a number between 0 and 100.")
+
+    @staticmethod
+    def validate_integer(value, name):
+        """
+        Validate integer values
+        """
+        try:
+            int_value = int(value)
+            if int_value < 0:
+                raise ValueError(f"{name} must be a non-negative integer")
+            return int_value
+        except ValueError:
+            raise ValueError(f"Invalid {name}: {value}. Must be a non-negative integer.")
+
+    @staticmethod
+    def validate_clustering_params(ani, coverage):
+        """
+        Validate clustering parameters
+        """
+        try:
+            ani_value = float(ani)
+            coverage_value = float(coverage)
+            
+            if ani_value < 0 or ani_value > 100:
+                raise ValueError("ANI must be between 0 and 100")
+            
+            if coverage_value < 0 or coverage_value > 100:
+                raise ValueError("Coverage must be between 0 and 100")
+            
+            return ani_value, coverage_value
+        except ValueError as e:
+            raise ValueError(f"Invalid clustering parameters: {e}")
+
+    @staticmethod
+    def validate_checkv_quality_levels(quality_levels):
+        """
+        Validate CheckV quality levels
+        - Must be a list or tuple
+        - Each level must be a string
+        - Must contain at least one valid quality level
+        """
+        # Valid quality levels
+        valid_levels = ['Low-quality', 'Medium-quality', 'High-quality', 'Complete']
+        
+        # Check if input is a list or tuple
+        if not isinstance(quality_levels, (list, tuple)):
+            raise ValueError("CheckV quality levels must be a list or tuple")
+        
+        # Ensure list is not empty
+        if not quality_levels:
+            raise ValueError("CheckV quality levels list cannot be empty")
+        
+        # Validate each level
+        for level in quality_levels:
+            if not isinstance(level, str):
+                raise ValueError(f"Quality level must be a string, got {type(level)}")
+            
+            if level not in valid_levels:
+                raise ValueError(f"Invalid quality level: {level}. Must be one of {valid_levels}")
+        
+        return quality_levels
+
+class PhoragerAnnotation:
+    def __init__(self, 
+                prophage_fasta=None,
+                db_location=None,
+                conda_cache_dir=None,
+                outdir=None,
+                threads=None,
+                min_prophage_length=None,
+                checkv_quality_levels=None,
+                skip_detailed_annotation=None,
+                annotation_filter_mode=None,
+                pharokka_structural_perc=None,
+                pharokka_structural_total=None,
+                phold_structural_perc=None,
+                phold_structural_total=None,
+                clustering_min_ani=None,
+                clustering_min_coverage=None,
+                verbose=False,
+                force=False):
+        
+        # Parse configuration
+        config = NextflowConfigParser.parse_config()
+        
+        # Validate and set prophage FASTA
+        self.prophage_fasta = (
+            AnnotationWorkflowValidator.validate_prophage_fasta(prophage_fasta) 
+            if prophage_fasta 
+            else None
+        )
+        
+        # Validate and set database location
+        self.db_location = AnnotationWorkflowValidator.validate_database_location(
+            db_location if db_location is not None else config['db_location']
+        )
+        
+        # Validate and set conda cache directory
+        self.conda_cache_dir = AnnotationWorkflowValidator.validate_database_location(
+            conda_cache_dir if conda_cache_dir else config['conda_cache_dir']
+        )
+        
+        # Validate and set output directory
+        self.outdir = AnnotationWorkflowValidator.validate_database_location(
+            outdir if outdir else config['outdir']
+        )
+        
+        # Validate and set threads
+        self.threads = AnnotationWorkflowValidator.validate_threads(
+            threads if threads is not None else config['threads']
+        )
+        
+        # Validate and set prophage length
+        self.min_prophage_length = AnnotationWorkflowValidator.validate_integer(
+            min_prophage_length if min_prophage_length is not None else config['min_prophage_length'],
+            'Minimum prophage length'
+        )
+        
+        # Set skip detailed annotation
+        self.skip_detailed_annotation = (
+            skip_detailed_annotation 
+            if skip_detailed_annotation is not None 
+            else config['skip_detailed_annotation']
+        )
+        
+        # Validate and set clustering parameters
+        self.clustering_min_ani, self.clustering_min_coverage = AnnotationWorkflowValidator.validate_clustering_params(
+            clustering_min_ani if clustering_min_ani is not None else config['clustering_min_ani'],
+            clustering_min_coverage if clustering_min_coverage is not None else config['clustering_min_coverage']
+        )
+        
+        # Validate and set annotation filter parameters
+        self.annotation_filter_mode = (
+            annotation_filter_mode 
+            if annotation_filter_mode is not None 
+            else config['annotation_filter_mode']
+        )
+        
+        self.pharokka_structural_perc = AnnotationWorkflowValidator.validate_percentage(
+            pharokka_structural_perc if pharokka_structural_perc is not None else config['pharokka_structural_perc'],
+            'Pharokka structural percentage'
+        )
+        
+        self.pharokka_structural_total = AnnotationWorkflowValidator.validate_integer(
+            pharokka_structural_total if pharokka_structural_total is not None else config['pharokka_structural_total'],
+            'Pharokka structural total'
+        )
+        
+        self.phold_structural_perc = AnnotationWorkflowValidator.validate_percentage(
+            phold_structural_perc if phold_structural_perc is not None else config['phold_structural_perc'],
+            'PHOLD structural percentage'
+        )
+        
+        self.phold_structural_total = AnnotationWorkflowValidator.validate_integer(
+            phold_structural_total if phold_structural_total is not None else config['phold_structural_total'],
+            'PHOLD structural total'
+        )
+        
+        # Validate CheckV quality levels
+        self.checkv_quality_levels = (
+            AnnotationWorkflowValidator.validate_checkv_quality_levels(
+                checkv_quality_levels 
+                if checkv_quality_levels is not None 
+                else config['checkv_quality_levels']
+            )
+        )
+
+        # Set verbose and force flags
+        self.verbose = verbose
+        self.force = force
+        
+        # Setup logging
+        self._setup_logging()
+    
+    def _setup_logging(self):
+        """
+        Configure logging with file and console output
+        """
+        log_dir = Path('./phorager_logs')
+        log_dir.mkdir(exist_ok=True)
+        
+        log_filename = log_dir / f"annotation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.log"
+        
+        logging.basicConfig(
+            level=logging.DEBUG if self.verbose else logging.INFO,
+            format='%(asctime)s - %(levelname)s: %(message)s',
+            handlers=[
+                logging.FileHandler(log_filename),
+                logging.StreamHandler(sys.stdout)
+            ]
+        )
+        self.logger = logging.getLogger(__name__)
+        
+        # Log parameters
+        self.logger.info(f"Prophage FASTA: {self.prophage_fasta}")
+        self.logger.info(f"Database Location: {self.db_location}")
+        self.logger.info(f"Threads: {self.threads}")
+        self.logger.info(f"Minimum Prophage Length: {self.min_prophage_length}")
+        self.logger.info(f"Skip Detailed Annotation: {self.skip_detailed_annotation}")
+    
+    def _run_nextflow_annotation(self):
+        """
+        Run Nextflow annotation workflow
+        """
+        cmd = [
+            'nextflow', 
+            'run', 
+            'main.nf', 
+            '-profile', 'conda',
+            '--workflow', 'annotation',
+        ]
+        
+        # Add optional parameters
+        if self.prophage_fasta:
+            cmd.extend([f'--prophage_fasta', self.prophage_fasta])
+        
+        cmd.extend([
+            f'--global_db_location', self.db_location,
+            f'--conda_cache_dir', self.conda_cache_dir,
+            f'--outdir', self.outdir,
+            f'--threads', str(self.threads),
+            f'--min_prophage_length', str(self.min_prophage_length),
+            f'--skip_detailed_annotation', str(self.skip_detailed_annotation),
+            f'--annotation_filter_mode', self.annotation_filter_mode,
+            f'--pharokka_structural_perc', str(self.pharokka_structural_perc),
+            f'--pharokka_structural_total', str(self.pharokka_structural_total),
+            f'--phold_structural_perc', str(self.phold_structural_perc),
+            f'--phold_structural_total', str(self.phold_structural_total),
+            f'--clustering_min_ani', str(self.clustering_min_ani),
+            f'--clustering_min_coverage', str(self.clustering_min_coverage)
+        ])
+        
+        try:
+            self.logger.info("Starting annotation workflow...")
+            
+            process = subprocess.Popen(
+                cmd, 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.STDOUT, 
+                text=True,
+                bufsize=1,
+                universal_newlines=True
+            )
+            
+            output_lines = []
+            while True:
+                output = process.stdout.readline()
+                if output == '' and process.poll() is not None:
+                    break
+                if output:
+                    output = output.strip()
+                    output_lines.append(output)
+                    
+                    self.logger.info(output)
+                    
+                    if self.verbose:
+                        print(output)
+            
+            if process.returncode != 0:
+                raise subprocess.CalledProcessError(
+                    process.returncode, 
+                    cmd, 
+                    '\n'.join(output_lines)
+                )
+            
+            # Cleanup
+            clean_cmd = ['nextflow', 'clean', '-f']
+            subprocess.run(clean_cmd, check=True, capture_output=not self.verbose, text=True)
+            
+            work_dir = os.path.join(self._resolve_project_dir(), 'work')
+            if os.path.exists(work_dir):
+                shutil.rmtree(work_dir)
+            
+            success_message = "Annotation workflow completed successfully!"
+            self.logger.info(success_message)
+            print(success_message)
+        
+        except subprocess.CalledProcessError as e:
+            error_message = f"Annotation workflow failed: {e}"
+            self.logger.error(error_message)
+            print(error_message)
+            sys.exit(1)
+    
+    def _resolve_project_dir(self):
+        """
+        Resolve the project directory
+        """
+        return os.path.dirname(os.path.abspath(sys.argv[0]))
+    
+    def run(self):
+        """
+        Main workflow execution
+        """
+        self._run_nextflow_annotation()
+
+## MAIN
 def main():    
     # Create the top-level parser
     parser = argparse.ArgumentParser(description='Phorager: Nextflow Pipeline Database Installer and Workflow Runner')
@@ -1080,6 +1518,25 @@ def main():
     prophage_parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
     prophage_parser.add_argument('--force', action='store_true', help='Force overwrite')
 
+    # Prophage annotation parser
+    annotation_parser = subparsers.add_parser('annotation', help='Run annotation workflow')
+    annotation_parser.add_argument('--prophage-fasta', help='Path to prophage FASTA file')
+    annotation_parser.add_argument('--db-location', help='Database location')
+    annotation_parser.add_argument('--conda-cache', help='Conda cache directory location')
+    annotation_parser.add_argument('--outdir', help='Output directory')
+    annotation_parser.add_argument('--threads', type=int, help='Number of threads')
+    annotation_parser.add_argument('--min-prophage-length', type=int, help='Minimum prophage length')
+    annotation_parser.add_argument('--skip-detailed-annotation', action='store_true', help='Skip detailed annotation')
+    annotation_parser.add_argument('--annotation-filter-mode', help='Annotation filter mode')
+    annotation_parser.add_argument('--pharokka-structural-perc', type=float, help='Pharokka structural percentage')
+    annotation_parser.add_argument('--pharokka-structural-total', type=int, help='Pharokka structural total')
+    annotation_parser.add_argument('--phold-structural-perc', type=float, help='PHOLD structural percentage')
+    annotation_parser.add_argument('--phold-structural-total', type=int, help='PHOLD structural total')
+    annotation_parser.add_argument('--clustering-min-ani', type=float, help='Minimum ANI for clustering')
+    annotation_parser.add_argument('--clustering-min-coverage', type=float, help='Minimum coverage for clustering')
+    annotation_parser.add_argument('--verbose', action='store_true', help='Enable verbose output')
+    annotation_parser.add_argument('--force', action='store_true', help='Force overwrite')
+
     # Parse arguments
     args = parser.parse_args()
     
@@ -1130,6 +1587,32 @@ def main():
                 use_dereplicated_genomes=args.use_dereplicated_genomes,
                 skip_genomad=args.skip_genomad,
                 skip_vibrant=args.skip_vibrant,
+                verbose=args.verbose,
+                force=args.force
+            )
+            workflow.run()
+        except Exception as e:
+            print(f"Error: {e}")
+            sys.exit(1)
+    
+    # Run annotation workflow
+    elif args.command == 'annotation':
+        try:
+            workflow = PhoragerAnnotation(
+                prophage_fasta=args.prophage_fasta,
+                db_location=args.db_location,
+                conda_cache_dir=args.conda_cache,
+                outdir=args.outdir,
+                threads=args.threads,
+                min_prophage_length=args.min_prophage_length,
+                skip_detailed_annotation=args.skip_detailed_annotation,
+                annotation_filter_mode=args.annotation_filter_mode,
+                pharokka_structural_perc=args.pharokka_structural_perc,
+                pharokka_structural_total=args.pharokka_structural_total,
+                phold_structural_perc=args.phold_structural_perc,
+                phold_structural_total=args.phold_structural_total,
+                clustering_min_ani=args.clustering_min_ani,
+                clustering_min_coverage=args.clustering_min_coverage,
                 verbose=args.verbose,
                 force=args.force
             )
