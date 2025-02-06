@@ -50,7 +50,7 @@ Using the wrapper script (recommended):
 ./phorager prophage --genome /path/to/genomes
 
 # Prophage annotation
-./phorager annotation
+./phorager annotation --prophage_fasta /path/to/prophages.fasta
 
 # Complete end-to-end analysis
 ./phorager run --genome /path/to/genomes
@@ -68,7 +68,7 @@ nextflow run main.nf --workflow bacterial --genome /path/to/genomes
 nextflow run main.nf --workflow prophage --genome /path/to/genomes
 
 # Prophage annotation
-nextflow run main.nf --workflow annotation
+nextflow run main.nf --workflow annotation --prophage_fasta /path/to/prophages.fasta
 ```
 
 ## Installation
@@ -77,7 +77,7 @@ nextflow run main.nf --workflow annotation
 
 - Linux-based operating system
 - Minimum 32GB RAM recommended (64GB for large datasets)
-- Minimum 100GB free disk space for databases
+- Minimum 100GB free disk space for databases, conda environment and output files
 - Internet connection for initial setup
 
 ### Prerequisites
@@ -133,12 +133,12 @@ nextflow run main.nf --workflow install
 This installation workflow will:
 - Set up all required conda environments
 - Download and install databases for:
-  - CheckM2 (≈ 1.3GB)
-  - geNomad (≈ 2.5GB)
-  - VIBRANT (≈ 12GB)
-  - CheckV (≈ 1.5GB)
-  - Pharokka (≈ 3GB)
-  - PHOLD (≈ 0.5GB)
+  - CheckM2 (≈ 2.9GB)
+  - geNomad (≈ 1.4GB)
+  - VIBRANT (≈ 11GB)
+  - CheckV (≈ 6.4GB)
+  - Pharokka (≈ 1.9GB)
+  - PHOLD (≈ 15GB)
 
 ### Configuration
 
