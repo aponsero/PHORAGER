@@ -1,4 +1,24 @@
-# Prophage Analysis Pipeline (Phorager)
+<div align="center">
+  <img src="logo_phorager.png" alt="Phorager Logo" width="400"/>
+
+  # Phorager
+  ### Prophage Analysis Pipeline
+
+  [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+  [![Nextflow](https://img.shields.io/badge/nextflow%20DSL2-%E2%89%A522.10.0-23aa62.svg)](https://www.nextflow.io/)
+  [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
+
+  A comprehensive pipeline for bacterial genome quality control, prophage detection, and prophage characterization
+
+  **Authors:**  
+  - Xena Dyball
+  - James Docherty
+  - [Alise Ponsero](https://github.com/aponsero)
+  - Ryan Cook
+
+  **Citation:**  
+  [Your Paper Citation or Preprint Link]
+</div>
 
 ## Overview
 
