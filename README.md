@@ -196,8 +196,8 @@ These parameters can be modified either by:
 ```bash
 # Using the wrapper script
 ./phorager install \
-    --conda_cache /path/to/conda \
-    --db_location /path/to/databases
+    --conda-cache /path/to/conda \
+    --db-location /path/to/databases
 
 # Or using Nextflow directly
 nextflow run main.nf --workflow install \
@@ -299,8 +299,8 @@ nextflow run main.nf --workflow bacterial --genome /path/to/genomes
 | `--completeness_threshold` | Minimum genome completeness (%) | 95 | `--completeness-threshold 90` | `--completeness_threshold 90` |
 | `--contamination_threshold` | Maximum contamination allowed (%) | 5 | `--contamination-threshold 10` | `--contamination_threshold 10` |
 | `--drep_ani_threshold` | ANI threshold for dereplication | 0.999 | `--drep-ani-threshold 0.95` | `--drep_ani_threshold 0.95` |
-| `--conda_cache` | Path to conda environment directory | `$projectDir/conda_cache` | `--conda-cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
-| `--db_location` | Path to database directory | `$projectDir/databases` | `--db-location /path/to/db` | `--global_db_location /path/to/db` |
+| `--conda-cache` | Path to conda environment directory | `$projectDir/conda_cache` | `--conda-cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
+| `--db-location` | Path to database directory | `$projectDir/databases` | `--db-location /path/to/db` | `--global_db_location /path/to/db` |
 | `--outdir` | Output directory | `$projectDir/results` | `--outdir /path/to/output` | `--outdir /path/to/output` |
 | `--threads` | Number of threads to use | All available cores | `--threads 4` | `--threads 4` |
 
@@ -465,8 +465,8 @@ nextflow run main.nf --workflow prophage --genome /path/to/genomes
 | `--use_dereplicated_genomes` | Use output from bacterial workflow | false | `--use_dereplicated_genomes true` | `--use_dereplicated_genomes true` |
 | `--run_genomad` | Enable geNomad analysis | true | `--run_genomad false` | `--run_genomad false` |
 | `--run_vibrant` | Enable VIBRANT analysis | true | `--run_vibrant false` | `--run_vibrant false` |
-| `--conda_cache` | Path to conda environment directory | `$HOME/phorager/conda_cache` | `--conda_cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
-| `--db_location` | Path to database directory | `$HOME/phorager/databases` | `--db_location /path/to/db` | `--global_db_location /path/to/db` |
+| `--conda-cache` | Path to conda environment directory | `$HOME/phorager/conda_cache` | `--conda_cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
+| `--db-location` | Path to database directory | `$HOME/phorager/databases` | `--db_location /path/to/db` | `--global_db_location /path/to/db` |
 
 ### Output Structure
 
@@ -574,8 +574,8 @@ nextflow run main.nf -resume \
 # Using the wrapper script
 ./phorager prophage \
     --genome /path/to/genomes \
-    --conda_cache /path/to/conda \
-    --db_location /path/to/databases
+    --conda-cache /path/to/conda \
+    --db-location /path/to/databases
 
 # Or using Nextflow directly
 nextflow run main.nf --workflow prophage \
@@ -641,8 +641,8 @@ nextflow run main.nf --workflow annotation
 | `--phold_structural_total` | Min structural genes (PHOLD) | 3 | `--phold_structural_total 4` | `--phold_structural_total 4` |
 | `--clustering_min_ani` | Minimum ANI for clustering | 99.0 | `--clustering_min_ani 95.0` | `--clustering_min_ani 95.0` |
 | `--clustering_min_coverage` | Minimum coverage for clustering | 85.0 | `--clustering_min_coverage 80.0` | `--clustering_min_coverage 80.0` |
-| `--conda_cache` | Path to conda environment directory | `$HOME/phorager/conda_cache` | `--conda_cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
-| `--db_location` | Path to database directory | `$HOME/phorager/databases` | `--db_location /path/to/db` | `--global_db_location /path/to/db` |
+| `--conda-cache` | Path to conda environment directory | `$HOME/phorager/conda_cache` | `--conda_cache /path/to/conda` | `--conda_cache_dir /path/to/conda` |
+| `--db-location` | Path to database directory | `$HOME/phorager/databases` | `--db_location /path/to/db` | `--global_db_location /path/to/db` |
 
 ### Output Structure
 
@@ -763,8 +763,8 @@ nextflow run main.nf --workflow annotation \
 ```bash
 # Using the wrapper script
 ./phorager annotation \
-    --conda_cache /path/to/conda \
-    --db_location /path/to/databases
+    --conda-cache /path/to/conda \
+    --db-location /path/to/databases
 
 # Or using Nextflow directly
 nextflow run main.nf --workflow annotation \
