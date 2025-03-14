@@ -1,18 +1,30 @@
 process INSTALL_PHOLD {
-    publishDir "${params.global_db_location}", mode: 'copy'
+    tag "Installing PHOLD"
+    label "conda_install"
+    publishDir "${db_location}", mode: 'copy', enabled: !conda_only
 
     input:
-    val db_location
+    path db_location
+    val conda_only
 
     output:
-    path "phold_database", emit: db_dir
+    path { conda_only ? "${db_location}" : "phold_database" }, emit: db_dir
 
     script:
-    """
-    # Create database directory
-    mkdir -p phold_database
+    def success_log = "${db_location}/phold_install_check.log"
     
-    # Install PHOLD database
-    phold install -d phold_database
-    """
+    if (conda_only)
+        """
+        echo "PHOLD conda environment installed successfully. Database download skipped (--conda-only was used)." > ${success_log}
+        """
+    else
+        """
+        # Create database directory
+        mkdir -p phold_database
+        
+        # Install PHOLD database
+        phold install -d phold_database
+        
+        echo "PHOLD installation completed successfully." > "${db_location}/phold_install_check.log"
+        """
 }

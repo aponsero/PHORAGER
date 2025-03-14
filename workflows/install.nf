@@ -1,21 +1,23 @@
-include { INSTALL_CHECKM2 } from '../modules/install_checkm2'
-include { INSTALL_DREP } from '../modules/install_drep'
-include { INSTALL_VIBRANT } from '../modules/install_vibrant'
-include { INSTALL_GENOMAD } from '../modules/install_genomad'
-include { INSTALL_PARSING_ENV } from '../modules/install_parsing_env'
-include { INSTALL_CHECKV } from '../modules/install_checkv'
-include { INSTALL_PHAROKKA } from '../modules/install_pharokka'
-include { INSTALL_PHOLD } from '../modules/install_phold'
+// Include all subworkflows
+include { install_genome } from './install_genome'
+include { install_prophage } from './install_prophage'
+include { install_annotation } from './install_annotation'
 
+// Main installation workflow
 workflow install {
     main:
-        db_location = file(params.global_db_location)
-        INSTALL_CHECKM2(params.global_db_location)
-        INSTALL_DREP(params.global_db_location)
-        INSTALL_VIBRANT(params.global_db_location)
-        INSTALL_GENOMAD(params.global_db_location)
-	INSTALL_PARSING_ENV(params.global_db_location)
-	INSTALL_CHECKV(params.global_db_location)
-	INSTALL_PHAROKKA(params.global_db_location)
-	INSTALL_PHOLD(params.global_db_location)
+        // Set default installation mode if not provided
+        install_mode = params.install_mode ? params.install_mode : 'all'
+        
+        if (install_mode == 'all' || install_mode == 'genome') {
+            install_genome()
+        }
+        
+        if (install_mode == 'all' || install_mode == 'prophage') {
+            install_prophage()
+        }
+        
+        if (install_mode == 'all' || install_mode == 'annotation') {
+            install_annotation()
+        }
 }

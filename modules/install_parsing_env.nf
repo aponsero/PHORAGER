@@ -1,6 +1,10 @@
 process INSTALL_PARSING_ENV {
+    tag "Installing parsing environment"
+    label "conda_install"
+
     input:
     path db_location
+    val conda_only
 
     output:
     path "${db_location}", emit: parse_env_check

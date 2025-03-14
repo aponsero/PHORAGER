@@ -74,6 +74,66 @@ class NextflowConfigParser:
             'clustering_min_coverage': NextflowConfigParser._parse_clustering_params(config_content)[1]
         }
 
+class NextflowConfigParser:
+    @staticmethod
+    def _resolve_project_dir():
+        """
+        Resolve the project directory based on the current script location
+        """
+        return os.path.dirname(os.path.abspath(sys.argv[0]))
+
+    @staticmethod
+    def parse_config(config_path='nextflow.config'):
+        """
+        Parse Nextflow configuration file to extract specific parameters
+        """
+        # Resolve project directory
+        project_dir = NextflowConfigParser._resolve_project_dir()
+
+        try:
+            with open(config_path, 'r') as f:
+                config_content = f.read()
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Nextflow config file not found: {config_path}")
+        except Exception as e:
+            raise ValueError(f"Error reading config file: {e}")
+
+        # Replace $projectDir with the actual project directory path
+        config_content = config_content.replace('$projectDir', project_dir)
+
+        # Parse all parameters with improved error handling
+        try:
+            return {
+                'db_location': NextflowConfigParser.parse_db_location(config_content),
+                'conda_cache_dir': NextflowConfigParser.parse_conda_cache(config_content),
+                'genome': NextflowConfigParser.parse_genome(config_content),
+                'threads': NextflowConfigParser._parse_threads(config_content),
+                'completeness_threshold': NextflowConfigParser.parse_completeness_threshold(config_content),
+                'contamination_threshold': NextflowConfigParser.parse_contamination_threshold(config_content),
+                'drep_ani_threshold': NextflowConfigParser.parse_drep_ani_threshold(config_content),
+                'outdir': NextflowConfigParser._parse_outdir(config_content),
+                'use_dereplicated_genomes': NextflowConfigParser._parse_use_dereplicated_genomes(config_content),
+                'run_genomad': NextflowConfigParser._parse_run_genomad(config_content),
+                'run_vibrant': NextflowConfigParser._parse_run_vibrant(config_content),
+                'genomad_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'genomad'),
+                'vibrant_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'vibrant'),
+                'checkv_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'checkv'),
+                'pharokka_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'pharokka'),
+                'phold_db_location': NextflowConfigParser._parse_db_location_for_tool(config_content, 'phold'),
+                'min_prophage_length': NextflowConfigParser._parse_min_prophage_length(config_content),
+                'checkv_quality_levels': NextflowConfigParser._parse_checkv_quality_levels(config_content),
+                'skip_detailed_annotation': NextflowConfigParser._parse_skip_detailed_annotation(config_content),
+                'annotation_filter_mode': NextflowConfigParser._parse_annotation_filter_mode(config_content),
+                'pharokka_structural_perc': NextflowConfigParser._parse_structural_params(config_content, 'pharokka')[0],
+                'pharokka_structural_total': NextflowConfigParser._parse_structural_params(config_content, 'pharokka')[1],
+                'phold_structural_perc': NextflowConfigParser._parse_structural_params(config_content, 'phold')[0],
+                'phold_structural_total': NextflowConfigParser._parse_structural_params(config_content, 'phold')[1],
+                'clustering_min_ani': NextflowConfigParser._parse_clustering_params(config_content)[0],
+                'clustering_min_coverage': NextflowConfigParser._parse_clustering_params(config_content)[1]
+            }
+        except Exception as e:
+            raise ValueError(f"Error parsing Nextflow config: {e}")
+
     @staticmethod
     def _parse_threads(config_content):
         """
@@ -88,12 +148,20 @@ class NextflowConfigParser:
             # Alternative parsing if explicit number is used
             threads_num_match = re.search(r'threads\s*=\s*(\d+)', config_content)
             if threads_num_match:
-                return int(threads_num_match.group(1))
+                threads = int(threads_num_match.group(1))
+                if threads < 1:
+                    logging.warning(f"Thread count in config ({threads}) is less than 1, defaulting to 1")
+                    return 1
+                return threads
             
             # Default to all available cores if no specification found
+            logging.info("No thread specification found in config, defaulting to available CPU cores")
             return multiprocessing.cpu_count()
-        except Exception:
-            # Fallback to all available cores
+        except ValueError as e:
+            logging.warning(f"Error parsing thread count from config: {e}, defaulting to available CPU cores")
+            return multiprocessing.cpu_count()
+        except Exception as e:
+            logging.warning(f"Unexpected error parsing thread count: {e}, defaulting to available CPU cores")
             return multiprocessing.cpu_count()
 
     @staticmethod
@@ -101,191 +169,426 @@ class NextflowConfigParser:
         """
         Parse global database location from config content
         """
-        db_match = re.search(r'global_db_location\s*=\s*"([^"]+)"', config_content)
-        db_location = db_match.group(1) if db_match else None
-
-        if not db_location:
-            raise ValueError("Could not parse database location from config")
-
-        return os.path.expandvars(os.path.expanduser(db_location))
+        try:
+            db_match = re.search(r'global_db_location\s*=\s*"([^"]+)"', config_content)
+            if not db_match:
+                raise ValueError("global_db_location parameter not found in config")
+            
+            db_location = db_match.group(1)
+            expanded_path = os.path.expandvars(os.path.expanduser(db_location))
+            
+            return expanded_path
+        except ValueError as e:
+            # Re-raise specific ValueError with original message
+            raise e
+        except Exception as e:
+            raise ValueError(f"Failed to parse global database location: {e}")
 
     @staticmethod
     def parse_conda_cache(config_content):
         """
         Parse conda cache directory from config content
         """
-        cache_match = re.search(r'conda_cache_dir\s*=\s*"([^"]+)"', config_content)
-        conda_cache_dir = cache_match.group(1) if cache_match else None
-
-        if not conda_cache_dir:
-            raise ValueError("Could not parse conda cache directory from config")
-
-        return os.path.expandvars(os.path.expanduser(conda_cache_dir))
+        try:
+            cache_match = re.search(r'conda_cache_dir\s*=\s*"([^"]+)"', config_content)
+            if not cache_match:
+                raise ValueError("conda_cache_dir parameter not found in config")
+            
+            conda_cache_dir = cache_match.group(1)
+            expanded_path = os.path.expandvars(os.path.expanduser(conda_cache_dir))
+            
+            return expanded_path
+        except ValueError as e:
+            # Re-raise specific ValueError with original message
+            raise e
+        except Exception as e:
+            raise ValueError(f"Failed to parse conda cache directory: {e}")
 
     @staticmethod
     def parse_genome(config_content):
         """
         Parse genome location from config content
         """
-        genome_match = re.search(r'genome\s*=\s*"([^"]+)"', config_content)
-        genome = genome_match.group(1) if genome_match else None
-
-        if not genome:
-            raise ValueError("Could not parse genome location from config")
-
-        return os.path.expandvars(os.path.expanduser(genome))
+        try:
+            genome_match = re.search(r'genome\s*=\s*"([^"]+)"', config_content)
+            if not genome_match:
+                raise ValueError("genome parameter not found in config")
+            
+            genome = genome_match.group(1)
+            expanded_path = os.path.expandvars(os.path.expanduser(genome))
+            
+            return expanded_path
+        except ValueError as e:
+            # Re-raise specific ValueError with original message
+            raise e
+        except Exception as e:
+            raise ValueError(f"Failed to parse genome location: {e}")
 
     @staticmethod
     def parse_completeness_threshold(config_content):
         """
         Parse completeness threshold from config content
         """
-        threshold_match = re.search(r'completeness_threshold\s*=\s*(\d+\.?\d*)', config_content)
-        threshold = float(threshold_match.group(1)) if threshold_match else 95.0
-
-        return threshold
+        try:
+            threshold_match = re.search(r'completeness_threshold\s*=\s*(\d+\.?\d*)', config_content)
+            if not threshold_match:
+                logging.info("completeness_threshold not found in config, using default value of 95.0")
+                return 95.0
+            
+            threshold = float(threshold_match.group(1))
+            
+            # Validate the threshold is in a reasonable range
+            if threshold < 0 or threshold > 100:
+                logging.warning(f"Completeness threshold ({threshold}) is outside the range 0-100, using anyway")
+            
+            return threshold
+        except ValueError as e:
+            logging.warning(f"Error parsing completeness threshold: {e}, using default of 95.0")
+            return 95.0
+        except Exception as e:
+            logging.warning(f"Unexpected error parsing completeness threshold: {e}, using default of 95.0")
+            return 95.0
 
     @staticmethod
     def parse_contamination_threshold(config_content):
         """
         Parse contamination threshold from config content
         """
-        threshold_match = re.search(r'contamination_threshold\s*=\s*(\d+\.?\d*)', config_content)
-        threshold = float(threshold_match.group(1)) if threshold_match else 5.0
-
-        return threshold
+        try:
+            threshold_match = re.search(r'contamination_threshold\s*=\s*(\d+\.?\d*)', config_content)
+            if not threshold_match:
+                logging.info("contamination_threshold not found in config, using default value of 5.0")
+                return 5.0
+            
+            threshold = float(threshold_match.group(1))
+            
+            # Validate the threshold is in a reasonable range
+            if threshold < 0 or threshold > 100:
+                logging.warning(f"Contamination threshold ({threshold}) is outside the range 0-100, using anyway")
+            
+            return threshold
+        except ValueError as e:
+            logging.warning(f"Error parsing contamination threshold: {e}, using default of 5.0")
+            return 5.0
+        except Exception as e:
+            logging.warning(f"Unexpected error parsing contamination threshold: {e}, using default of 5.0")
+            return 5.0
 
     @staticmethod
     def parse_drep_ani_threshold(config_content):
         """
         Parse dRep ANI threshold from config content
         """
-        threshold_match = re.search(r'drep_ani_threshold\s*=\s*(\d+\.?\d*)', config_content)
-        threshold = float(threshold_match.group(1)) if threshold_match else 0.999
-
-        return threshold
+        try:
+            threshold_match = re.search(r'drep_ani_threshold\s*=\s*(\d+\.?\d*)', config_content)
+            if not threshold_match:
+                logging.info("drep_ani_threshold not found in config, using default value of 0.999")
+                return 0.999
+            
+            threshold = float(threshold_match.group(1))
+            
+            # Validate the threshold is in a reasonable range
+            if threshold < 0 or threshold > 1:
+                logging.warning(f"dRep ANI threshold ({threshold}) is outside the range 0-1, using anyway")
+            
+            return threshold
+        except ValueError as e:
+            logging.warning(f"Error parsing dRep ANI threshold: {e}, using default of 0.999")
+            return 0.999
+        except Exception as e:
+            logging.warning(f"Unexpected error parsing dRep ANI threshold: {e}, using default of 0.999")
+            return 0.999
 
     @staticmethod
     def _parse_outdir(config_content):
         """
         Parse output directory from config content
         """
-        outdir_match = re.search(r'outdir\s*=\s*"([^"]+)"', config_content)
-        outdir = outdir_match.group(1) if outdir_match else "$projectDir/results"
-        
-        # Expand project directory and user home
-        outdir = os.path.expandvars(os.path.expanduser(outdir))
-        
-        return outdir
+        try:
+            outdir_match = re.search(r'outdir\s*=\s*"([^"]+)"', config_content)
+            if not outdir_match:
+                logging.info("outdir not found in config, using default value of '$projectDir/results'")
+                outdir = os.path.join(NextflowConfigParser._resolve_project_dir(), "results")
+            else:
+                outdir = outdir_match.group(1)
+            
+            # Expand project directory and user home
+            expanded_path = os.path.expandvars(os.path.expanduser(outdir))
+            
+            return expanded_path
+        except Exception as e:
+            logging.warning(f"Error parsing output directory: {e}, using default")
+            return os.path.join(NextflowConfigParser._resolve_project_dir(), "results")
     
     @staticmethod
     def _parse_use_dereplicated_genomes(config_content):
         """
         Parse use_dereplicated_genomes parameter
         """
-        match = re.search(r'use_dereplicated_genomes\s*=\s*(\w+)', config_content)
-        return match.group(1).lower() == 'true' if match else False
+        try:
+            match = re.search(r'use_dereplicated_genomes\s*=\s*(\w+)', config_content)
+            if not match:
+                logging.info("use_dereplicated_genomes not found in config, using default value of false")
+                return False
+            
+            value = match.group(1).lower()
+            if value not in ['true', 'false']:
+                logging.warning(f"Invalid value for use_dereplicated_genomes: {value}, expected 'true' or 'false', defaulting to false")
+                return False
+                
+            return value == 'true'
+        except Exception as e:
+            logging.warning(f"Error parsing use_dereplicated_genomes: {e}, using default of false")
+            return False
 
     @staticmethod
     def _parse_run_genomad(config_content):
         """
         Parse run_genomad parameter
         """
-        match = re.search(r'run_genomad\s*=\s*(\w+)', config_content)
-        print("MATCH:", match)
-        if match:
-            result = match.group(1).lower() == 'true'
-            print("RESULT:", result)
+        try:
+            match = re.search(r'run_genomad\s*=\s*(\w+)', config_content)
+            if not match:
+                logging.info("run_genomad not found in config, using default value of true")
+                return True
+            
+            value = match.group(1).lower()
+            if value not in ['true', 'false']:
+                logging.warning(f"Invalid value for run_genomad: {value}, expected 'true' or 'false', defaulting to true")
+                return True
+                
+            result = value == 'true'
+            logging.debug(f"run_genomad set to: {result}")
             return result
-        return True  # Default to True if not specified
+        except Exception as e:
+            logging.warning(f"Error parsing run_genomad: {e}, using default of true")
+            return True
 
     @staticmethod
     def _parse_run_vibrant(config_content):
         """
         Parse run_vibrant parameter
         """
-        match = re.search(r'run_vibrant\s*=\s*(\w+)', config_content)
-        print("MATCH:", match)
-        if match:
-            result = match.group(1).lower() == 'true'
-            print("RESULT:", result)
+        try:
+            match = re.search(r'run_vibrant\s*=\s*(\w+)', config_content)
+            if not match:
+                logging.info("run_vibrant not found in config, using default value of true")
+                return True
+            
+            value = match.group(1).lower()
+            if value not in ['true', 'false']:
+                logging.warning(f"Invalid value for run_vibrant: {value}, expected 'true' or 'false', defaulting to true")
+                return True
+                
+            result = value == 'true'
+            logging.debug(f"run_vibrant set to: {result}")
             return result
-        return True  # Default to True if not specified
+        except Exception as e:
+            logging.warning(f"Error parsing run_vibrant: {e}, using default of true")
+            return True
 
     @staticmethod
     def _parse_db_location_for_tool(config_content, tool):
         """
         Parse database location for a specific tool
         """
-        match = re.search(rf'{tool}_db_location\s*=\s*"([^"]+)"', config_content)
-        db_location = match.group(1) if match else None
-        
-        if not db_location:
-            raise ValueError(f"Could not parse {tool} database location from config")
-        
-        return os.path.expandvars(os.path.expanduser(db_location))
+        try:
+            param_name = f"{tool}_db_location"
+            match = re.search(rf'{tool}_db_location\s*=\s*"([^"]+)"', config_content)
+            if not match:
+                raise ValueError(f"{param_name} parameter not found in config")
+            
+            db_location = match.group(1)
+            expanded_path = os.path.expandvars(os.path.expanduser(db_location))
+            
+            return expanded_path
+        except ValueError as e:
+            # Re-raise specific ValueError with original message
+            raise e
+        except Exception as e:
+            raise ValueError(f"Failed to parse {tool} database location: {e}")
 
     @staticmethod
     def _parse_min_prophage_length(config_content):
         """
         Parse minimum prophage length from config content
         """
-        match = re.search(r'min_prophage_length\s*=\s*(\d+)', config_content)
-        return int(match.group(1)) if match else 5000
+        try:
+            match = re.search(r'min_prophage_length\s*=\s*(\d+)', config_content)
+            if not match:
+                logging.info("min_prophage_length not found in config, using default value of 5000")
+                return 5000
+            
+            length = int(match.group(1))
+            if length <= 0:
+                logging.warning(f"Invalid minimum prophage length: {length}, must be positive, defaulting to 5000")
+                return 5000
+                
+            return length
+        except ValueError as e:
+            logging.warning(f"Error parsing minimum prophage length: {e}, using default of 5000")
+            return 5000
+        except Exception as e:
+            logging.warning(f"Unexpected error parsing minimum prophage length: {e}, using default of 5000")
+            return 5000
 
     @staticmethod
     def _parse_checkv_quality_levels(config_content):
         """
         Parse CheckV quality levels from config content
         """
-        match = re.search(r'checkv_quality_levels\s*=\s*\[(.*?)\]', config_content)
-        if match:
+        try:
+            match = re.search(r'checkv_quality_levels\s*=\s*\[(.*?)\]', config_content)
+            if not match:
+                logging.info("checkv_quality_levels not found in config, using default values")
+                return ['Medium-quality', 'High-quality', 'Complete']
+            
             # Split and strip each quality level
-            quality_levels = [level.strip().strip("'\"") for level in match.group(1).split(',')]
+            quality_levels_str = match.group(1)
+            quality_levels = [level.strip().strip("'\"") for level in quality_levels_str.split(',')]
+            
+            # Validate quality levels
+            valid_levels = ['Low-quality', 'Medium-quality', 'High-quality', 'Complete']
+            for level in quality_levels:
+                if level not in valid_levels:
+                    logging.warning(f"Invalid CheckV quality level: {level}, expected one of {valid_levels}")
+            
+            # If empty or all invalid, use defaults
+            if not quality_levels or not any(level in valid_levels for level in quality_levels):
+                logging.warning("No valid CheckV quality levels found, using defaults")
+                return ['Medium-quality', 'High-quality', 'Complete']
+                
             return quality_levels
-        return ['Medium-quality', 'High-quality', 'Complete']
+        except Exception as e:
+            logging.warning(f"Error parsing CheckV quality levels: {e}, using default values")
+            return ['Medium-quality', 'High-quality', 'Complete']
 
     @staticmethod
     def _parse_skip_detailed_annotation(config_content):
         """
         Parse skip detailed annotation flag from config content
         """
-        match = re.search(r'skip_detailed_annotation\s*=\s*(\w+)', config_content)
-        return match.group(1).lower() == 'true' if match else False
+        try:
+            match = re.search(r'skip_detailed_annotation\s*=\s*(\w+)', config_content)
+            if not match:
+                logging.info("skip_detailed_annotation not found in config, using default value of false")
+                return False
+            
+            value = match.group(1).lower()
+            if value not in ['true', 'false']:
+                logging.warning(f"Invalid value for skip_detailed_annotation: {value}, expected 'true' or 'false', defaulting to false")
+                return False
+                
+            return value == 'true'
+        except Exception as e:
+            logging.warning(f"Error parsing skip_detailed_annotation: {e}, using default of false")
+            return False
 
     @staticmethod
     def _parse_annotation_filter_mode(config_content):
         """
         Parse annotation filter mode from config content
         """
-        match = re.search(r'annotation_filter_mode\s*=\s*[\'"](\w+)[\'"]', config_content)
-        return match.group(1) if match else 'both'
+        try:
+            match = re.search(r'annotation_filter_mode\s*=\s*[\'"](\w+)[\'"]', config_content)
+            if not match:
+                logging.info("annotation_filter_mode not found in config, using default value of 'both'")
+                return 'both'
+            
+            mode = match.group(1)
+            valid_modes = ['both', 'pharokka', 'phold', 'none']
+            if mode not in valid_modes:
+                logging.warning(f"Invalid annotation filter mode: {mode}, expected one of {valid_modes}, defaulting to 'both'")
+                return 'both'
+                
+            return mode
+        except Exception as e:
+            logging.warning(f"Error parsing annotation filter mode: {e}, using default of 'both'")
+            return 'both'
 
     @staticmethod
     def _parse_structural_params(config_content, tool):
         """
         Parse structural parameters for Pharokka or PHOLD
         """
-        perc_match = re.search(rf'{tool}_structural_perc\s*=\s*(\d+\.?\d*)', config_content)
-        total_match = re.search(rf'{tool}_structural_total\s*=\s*(\d+)', config_content)
-        
-        perc = float(perc_match.group(1)) if perc_match else 20.0
-        total = int(total_match.group(1)) if total_match else 3
-        
-        return perc, total
+        try:
+            perc_param = f"{tool}_structural_perc"
+            total_param = f"{tool}_structural_total"
+            
+            perc_match = re.search(rf'{tool}_structural_perc\s*=\s*(\d+\.?\d*)', config_content)
+            total_match = re.search(rf'{tool}_structural_total\s*=\s*(\d+)', config_content)
+            
+            # Default values
+            default_perc = 20.0
+            default_total = 3
+            
+            # Parse percentage
+            if not perc_match:
+                logging.info(f"{perc_param} not found in config, using default value of {default_perc}")
+                perc = default_perc
+            else:
+                perc = float(perc_match.group(1))
+                if perc < 0 or perc > 100:
+                    logging.warning(f"Invalid {perc_param}: {perc}, must be between 0 and 100, defaulting to {default_perc}")
+                    perc = default_perc
+            
+            # Parse total
+            if not total_match:
+                logging.info(f"{total_param} not found in config, using default value of {default_total}")
+                total = default_total
+            else:
+                total = int(total_match.group(1))
+                if total < 0:
+                    logging.warning(f"Invalid {total_param}: {total}, must be non-negative, defaulting to {default_total}")
+                    total = default_total
+            
+            return perc, total
+        except ValueError as e:
+            logging.warning(f"Error parsing {tool} structural parameters: {e}, using default values")
+            return 20.0, 3
+        except Exception as e:
+            logging.warning(f"Unexpected error parsing {tool} structural parameters: {e}, using default values")
+            return 20.0, 3
 
     @staticmethod
     def _parse_clustering_params(config_content):
         """
         Parse clustering parameters
         """
-        ani_match = re.search(r'clustering_min_ani\s*=\s*(\d+\.?\d*)', config_content)
-        coverage_match = re.search(r'clustering_min_coverage\s*=\s*(\d+\.?\d*)', config_content)
-        
-        ani = float(ani_match.group(1)) if ani_match else 99.0
-        coverage = float(coverage_match.group(1)) if coverage_match else 85.0
-        
-        return ani, coverage
+        try:
+            default_ani = 99.0
+            default_coverage = 85.0
+            
+            ani_match = re.search(r'clustering_min_ani\s*=\s*(\d+\.?\d*)', config_content)
+            coverage_match = re.search(r'clustering_min_coverage\s*=\s*(\d+\.?\d*)', config_content)
+            
+            # Parse ANI
+            if not ani_match:
+                logging.info(f"clustering_min_ani not found in config, using default value of {default_ani}")
+                ani = default_ani
+            else:
+                ani = float(ani_match.group(1))
+                if ani < 0 or ani > 100:
+                    logging.warning(f"Invalid clustering_min_ani: {ani}, must be between 0 and 100, defaulting to {default_ani}")
+                    ani = default_ani
+            
+            # Parse coverage
+            if not coverage_match:
+                logging.info(f"clustering_min_coverage not found in config, using default value of {default_coverage}")
+                coverage = default_coverage
+            else:
+                coverage = float(coverage_match.group(1))
+                if coverage < 0 or coverage > 100:
+                    logging.warning(f"Invalid clustering_min_coverage: {coverage}, must be between 0 and 100, defaulting to {default_coverage}")
+                    coverage = default_coverage
+            
+            return ani, coverage
+        except ValueError as e:
+            logging.warning(f"Error parsing clustering parameters: {e}, using default values")
+            return 99.0, 85.0
+        except Exception as e:
+            logging.warning(f"Unexpected error parsing clustering parameters: {e}, using default values")
+            return 99.0, 85.0
 
 ## Sub-workflow classes
 ## Installation
@@ -293,7 +596,9 @@ class PhoragerInstaller:
     def __init__(self, 
                  db_location=None, 
                  conda_cache_dir=None, 
-                 force_reinstall=False, 
+                 force_reinstall=False,
+                 install_mode='all',
+                 conda_only=False,
                  verbose=False):
         # Parse configuration
         config = NextflowConfigParser.parse_config()
@@ -303,6 +608,8 @@ class PhoragerInstaller:
         self.conda_cache_dir = os.path.expandvars(os.path.expanduser(conda_cache_dir)) if conda_cache_dir else config['conda_cache_dir']
         
         self.force_reinstall = force_reinstall
+        self.install_mode = install_mode
+        self.conda_only = conda_only
         self.verbose = verbose
         
         # Logging setup
@@ -353,7 +660,15 @@ class PhoragerInstaller:
         """
         for location in locations:
             try:
-                total, used, free = shutil.disk_usage(location)
+                # Get parent directory that exists if location doesn't exist
+                check_path = location
+                while not os.path.exists(check_path):
+                    check_path = os.path.dirname(check_path)
+                    if check_path == '':  # Root directory check
+                        check_path = '/'
+                        break
+                
+                total, used, free = shutil.disk_usage(check_path)
                 free_gb = free / (1024**3)
                 
                 if free_gb < min_space_gb:
@@ -362,6 +677,8 @@ class PhoragerInstaller:
                         f"Required: {min_space_gb}G, Available: {free_gb:.2f}G{TerminalColors.RESET}"
                     )
                     sys.exit(1)
+                else:
+                    self.logger.info(f"Sufficient disk space available for {location}: {free_gb:.2f}G")
             except Exception as e:
                 self.logger.warning(f"Could not check disk space for {location}: {e}")
     
@@ -373,63 +690,6 @@ class PhoragerInstaller:
             os.makedirs(location, exist_ok=True)
             self.logger.info(f"Ensuring directory exists: {location}")
 
-    
-        """
-        Run Nextflow installation workflow with optional verbose output
-        """
-        # Installation command
-        install_cmd = [
-            'nextflow', 
-            'run', 
-            'main.nf', 
-            '-profile', 'conda',
-            '--workflow', 'install',
-            f'--global_db_location', self.db_location,
-            f'--conda_cache_dir', self.conda_cache_dir
-        ]
-        
-        # Add force flag if specified
-        if self.force_reinstall:
-            install_cmd.append('--force')
-        
-        try:
-            # Run installation with explicit output handling
-            self.logger.info(f"{TerminalColors.YELLOW}Starting database installation...{TerminalColors.RESET}")
-            
-            # Use subprocess with explicit output control
-            if self.verbose:
-                # If verbose, use subprocess.run to show all output
-                install_result = subprocess.run(
-                    install_cmd, 
-                    check=True,
-                    text=True
-                )
-            else:
-                # If not verbose, capture output for error analysis
-                install_result = subprocess.run(
-                    install_cmd, 
-                    capture_output=True,
-                    text=True,
-                    check=True
-                )
-            
-        except subprocess.CalledProcessError as e:
-            # Log full error details
-            self.logger.error(
-                f"{TerminalColors.RED}Installation failed:{TerminalColors.RESET}"
-            )
-            # Print stderr to help diagnose the issue
-            if e.stderr:
-                self.logger.error(f"Error output: {e.stderr}")
-            if e.stdout:
-                self.logger.error(f"Standard output: {e.stdout}")
-            
-            # If in verbose mode, also print to console
-            if self.verbose:
-                print(f"Error output: {e.stderr}")
-                print(f"Standard output: {e.stdout}")
-            
-            sys.exit(1)
 
     def _run_nextflow_install(self):
         """
@@ -443,7 +703,9 @@ class PhoragerInstaller:
             '-profile', 'conda',
             '--workflow', 'install',
             f'--global_db_location', self.db_location,
-            f'--conda_cache_dir', self.conda_cache_dir
+            f'--conda_cache_dir', self.conda_cache_dir,
+            f'--install_mode', self.install_mode.lower(),
+            f'--conda_only', str(self.conda_only)
         ]
         
         # Add force flag if specified
@@ -493,7 +755,7 @@ class PhoragerInstaller:
                 )
             
             # Log and print installation success
-            success_message = f"{TerminalColors.GREEN}Database installation successful!{TerminalColors.RESET}"
+            success_message = f"{TerminalColors.GREEN}phorager installation successful!{TerminalColors.RESET}"
             self.logger.info(success_message)
             print(success_message)
             
@@ -537,12 +799,12 @@ class PhoragerInstaller:
             """
             # Validate Nextflow installation
             self._validate_nextflow_installation()
+
+            # Prepare directories
+            self._prepare_directories()
             
             # Check disk space for both locations
             self._check_disk_space([self.db_location, self.conda_cache_dir])
-            
-            # Prepare directories
-            self._prepare_directories()
             
             # Run installation
             self._run_nextflow_install()
@@ -1461,6 +1723,11 @@ class PhoragerAnnotation:
         """
         Main workflow execution
         """
+        if self.prophage_fasta is None:
+            self.logger.error("No prophage FASTA file provided. This is required when running the annotation workflow directly.")
+            print("Error: No prophage FASTA file provided. This is required when running the annotation workflow directly.")
+            sys.exit(1)
+        
         self._run_nextflow_annotation()
 
 ## MAIN
@@ -1473,24 +1740,12 @@ def main():
     
     # Install subcommand
     install_parser = subparsers.add_parser('install', help='Install databases')
-    install_parser.add_argument(
-        '--db-location', 
-        help='Custom database installation location'
-    )
-    install_parser.add_argument(
-        '--conda-cache', 
-        help='Custom conda cache directory'
-    )
-    install_parser.add_argument(
-        '--force', 
-        action='store_true', 
-        help='Force reinstall all databases'
-    )
-    install_parser.add_argument(
-        '--verbose', 
-        action='store_true', 
-        help='Enable verbose logging'
-    )
+    install_parser.add_argument('--mode',choices=['all', 'genome', 'prophage', 'annotation'], default='all', help='Installation mode: all components or specific subsets')
+    install_parser.add_argument('--db-location', help='Custom database installation location')
+    install_parser.add_argument('--conda-cache', help='Custom conda cache directory')
+    install_parser.add_argument('--force', action='store_true', help='Force reinstall all databases')
+    install_parser.add_argument('--conda-only', action='store_true', help='Install only Conda environments, skip database downloads')
+    install_parser.add_argument('--verbose', action='store_true', help='Enable verbose logging')
     
     # Bacterial subcommand
     bacterial_parser = subparsers.add_parser('bacterial', help='Run bacterial workflow')
@@ -1578,11 +1833,13 @@ def main():
         installer = PhoragerInstaller(
             db_location=args.db_location,
             conda_cache_dir=args.conda_cache,
-            force_reinstall=args.force, 
+            force_reinstall=args.force,
+            install_mode=args.mode,
+            conda_only=args.conda_only,
             verbose=args.verbose
         )
         installer.run()
-    
+        
     # Run bacterial workflow
     elif args.command == 'bacterial':
         try:

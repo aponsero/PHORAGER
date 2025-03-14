@@ -1,18 +1,30 @@
 process INSTALL_PHAROKKA {
-    publishDir "${params.global_db_location}", mode: 'copy'
+    tag "Installing Pharokka"
+    label "conda_install"
+    publishDir "${db_location}", mode: 'copy', enabled: !conda_only
 
     input:
-    val db_location
+    path db_location
+    val conda_only
 
     output:
-    path "pharokka_database", emit: db_dir
+    path { conda_only ? "${db_location}" : "pharokka_database" }, emit: db_dir
 
     script:
-    """
-    # Create database directory
-    mkdir -p pharokka_database
+    def success_log = "${db_location}/pharokka_install_check.log"
     
-    # Run database installation
-    install_databases.py -o pharokka_database
-    """
+    if (conda_only)
+        """
+        echo "Pharokka conda environment installed successfully. Database download skipped (--conda-only was used)." > ${success_log}
+        """
+    else
+        """
+        # Create database directory
+        mkdir -p pharokka_database
+        
+        # Run database installation
+        install_databases.py -o pharokka_database
+        
+        echo "Pharokka installation completed successfully." > "${db_location}/pharokka_install_check.log"
+        """
 }

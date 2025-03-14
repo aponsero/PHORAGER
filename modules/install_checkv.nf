@@ -1,15 +1,27 @@
 process INSTALL_CHECKV {
-    publishDir "${db_location}/checkv_database", mode: 'copy'
+    tag "Installing CheckV"
+    label "conda_install"
+    publishDir "${db_location}/checkv_database", mode: 'copy', enabled: !conda_only
 
     input:
-    val db_location
+    path db_location
+    val conda_only
 
     output:
-    path "checkv-db-v1.5", emit: db_dir
+    path { conda_only ? "${db_location}" : "checkv-db-v1.5" }, emit: db_dir
 
     script:
-    """
-    # Download CheckV database in the work directory
-    checkv download_database .
-    """
+    def success_log = "${db_location}/checkv_install_check.log"
+    
+    if (conda_only)
+        """
+        echo "CheckV conda environment installed successfully. Database download skipped (--conda-only was used)." > ${success_log}
+        """
+    else
+        """
+        # Download CheckV database in the work directory
+        checkv download_database .
+        
+        echo "CheckV installation completed successfully." > "${db_location}/checkv_install_check.log"
+        """
 }
