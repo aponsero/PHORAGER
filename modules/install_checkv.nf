@@ -1,7 +1,7 @@
 process INSTALL_CHECKV {
     tag "Installing CheckV"
     label "conda_install"
-    publishDir "${db_location}/checkv_database", mode: 'copy', enabled: !conda_only
+    publishDir "${db_location}/checkv_database", mode: 'copy', enabled: !params.conda_only
 
     input:
     path db_location

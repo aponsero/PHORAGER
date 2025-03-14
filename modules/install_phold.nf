@@ -1,7 +1,7 @@
 process INSTALL_PHOLD {
     tag "Installing PHOLD"
     label "conda_install"
-    publishDir "${db_location}", mode: 'copy', enabled: !conda_only
+    publishDir "${db_location}", mode: 'copy', enabled: !params.conda_only
 
     input:
     path db_location
