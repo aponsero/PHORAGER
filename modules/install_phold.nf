@@ -8,7 +8,7 @@ process INSTALL_PHOLD {
     val conda_only
 
     output:
-    path { conda_only ? "${db_location}" : "phold_database" }, emit: db_dir
+    path "${conda_only ? db_location : 'checkv-db-v1.5'}", emit: db_dir
 
     script:
     def success_log = "${db_location}/phold_install_check.log"

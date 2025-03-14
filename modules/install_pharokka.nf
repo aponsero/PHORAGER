@@ -8,7 +8,7 @@ process INSTALL_PHAROKKA {
     val conda_only
 
     output:
-    path { conda_only ? "${db_location}" : "pharokka_database" }, emit: db_dir
+    path "${conda_only ? db_location : 'checkv-db-v1.5'}", emit: db_dir
 
     script:
     def success_log = "${db_location}/pharokka_install_check.log"
