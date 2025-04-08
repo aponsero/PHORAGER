@@ -16,7 +16,7 @@ workflow bacterial {
         checkm2_db_ch = Channel.fromPath(params.checkm2_db_location, checkIfExists: true)
 
         // Run CheckM2
-        CHECKM2(genome_ch.collect(), checkm2_db_ch)
+        CHECKM2(genome_ch.collect(), checkm2_db_ch, params.threads)
 
         // Filter genomes on completeness and contamination
         FILTER_GENOMES(CHECKM2.out.report, params.completeness_threshold, params.contamination_threshold)
