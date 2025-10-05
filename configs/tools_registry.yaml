@@ -1,0 +1,103 @@
+# Phorager Tools Registry
+# Defines available tools and their requirements
+
+tools:
+  drep:
+    description: "Genome dereplication"
+    group: ["genome"]
+    database_required: false
+    conda_package: "bioconda::drep=3.5.0"
+    singularity_container: "quay.io/biocontainers/drep:3.5.0--pyhdfd78af_0"
+    verification_command: "dRep"
+    verification_pattern: "dRep v3.5.0"
+    version: "3.5.0"
+  checkm2:
+    description: "Genome quality"
+    group: ["genome"]
+    database_required: true
+    conda_package: "bioconda::checkm2=1.0.1"
+    singularity_container: "quay.io-biocontainers-checkm2-1.0.1--pyh7cba7a3_0"
+    verification_command: "checkm2 -h"
+    verification_pattern: "CheckM2 v1.0.1"
+    version: "1.0.1"
+  parsing_env:
+    description: "Python parsing environment for data processing"
+    group: ["genome", "prophage", "annotation"]
+    database_required: false
+    conda_package: "conda-forge::pandas=2.2.3 conda-forge::biopython=1.84"
+    singularity_container: "aponsero/phorager/parsing-env:1.0"
+    verification_command: "python -c 'import pandas; import Bio; print(f\"pandas {pandas.__version__}, biopython {Bio.__version__}\")'"
+    verification_pattern: "pandas 2.2.3"
+    version: "pandas=2.2.3, biopython=1.84"
+  genomad:
+    description: "Prophage and virus detection in genomes"
+    group: ["prophage"]
+    database_required: true
+    conda_package: "bioconda::genomad=1.8.1"
+    singularity_container: "quay.io/biocontainers/genomad:1.8.1--pyhdfd78af_0"
+    verification_command: "genomad --version"
+    verification_pattern: "1.8.1"
+    version: "1.8.1"
+  vibrant:
+    description: "Prophage detection in bacterial genomes"
+    group: ["prophage"]
+    database_required: true
+    conda_package: "bioconda::vibrant=1.2.1"
+    singularity_container: "quay.io/biocontainers/vibrant:1.2.1--hdfd78af_4"
+    verification_command: "VIBRANT_run.py --help"
+    verification_pattern: "VIBRANT"
+    version: "1.2.1"
+  checkv:
+    description: "Virus genome quality assessment"
+    group: ["annotation"]
+    database_required: true
+    conda_package: "conda-forge::python=3.9 bioconda::checkv=1.0.3 bioconda::blast=2.16.0 bioconda::seqfu=1.22.0"
+    singularity_container: "aponsero/phorager/checkv-env:1.0"
+    verification_command: "checkv --help"
+    verification_pattern: "1.0.3"
+    version: "1.0.3"
+  pharokka:
+    description: "Phage genome annotation"
+    group: ["annotation"]
+    database_required: true
+    conda_package: "bioconda::pharokka=1.7.4"
+    singularity_container: "quay.io/biocontainers/pharokka:1.7.4--pyhdfd78af_0"
+    verification_command: "pharokka.py --version"
+    verification_pattern: "1.7.4"
+    version: "1.7.4"
+  phold:
+    description: "Phage protein function prediction"
+    group: ["annotation"]
+    database_required: true
+    conda_package: "bioconda::phold=0.2.0"
+    singularity_container: "quay.io/biocontainers/phold:0.2.0--pyhdfd78af_0"
+    verification_command: "phold --version"
+    verification_pattern: "0.2.0"
+    version: "0.2.0"
+
+databases:
+  checkm2:
+    tool: "checkm2"
+    download_methods:
+      conda: "Direct Zenodo download + extraction"
+      singularity: "Direct Zenodo download + extraction"
+    key_file: "uniref100.KO.1.dmnd"
+    expected_size_gb: 2.9
+  genomad:
+    tool: "genomad"
+    download_methods:
+      conda: "Direct Zenodo download + extraction"
+      singularity: "Direct Zenodo download + extraction"
+    key_file: "genomad_db"
+    expected_size_gb: 1.4
+  vibrant:
+    tool: "vibrant"
+    download_methods:
+      conda: "VIBRANT_setup.py with hmmpress fix"
+      singularity: "VIBRANT_setup.py with hmmpress fix"
+    key_file: "VOGDB94_phage.HMM"
+    expected_size_gb: 11.0
+  # Annotation tool databases will be added when focusing on database installation
+  # checkv:
+  # pharokka:
+  # pho

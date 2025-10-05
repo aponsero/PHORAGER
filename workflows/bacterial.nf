@@ -1,7 +1,7 @@
-include { CHECKM2 } from '../modules/checkm2'
-include { FILTER_GENOMES } from '../modules/filter_genomes'
-include { DREP } from '../modules/drep'
-include { SUMMARY_REPORT } from '../modules/summary_report'
+include { CHECKM2 } from '../modules/tools/checkm2'
+include { FILTER_GENOMES } from '../modules/utilities/filter_genomes'
+include { DREP } from '../modules/tools/drep'
+include { SUMMARY_REPORT } from '../modules/utilities/summary_report'
 
 workflow bacterial {
     main:
@@ -13,7 +13,7 @@ workflow bacterial {
             genome_ch = Channel.fromPath(params.genome, checkIfExists: true)
         }
 
-        checkm2_db_ch = Channel.fromPath(params.checkm2_db_location, checkIfExists: true)
+        checkm2_db_ch = Channel.fromPath("${params.database_location}/CheckM2_database", checkIfExists: true)
 
         // Run CheckM2
         CHECKM2(genome_ch.collect(), checkm2_db_ch, params.threads)
@@ -34,23 +34,17 @@ workflow bacterial {
             .set { drep_decision }
 
         // Run dRep only if we have more than 1 genome
-        drep_out = drep_decision.run_drep
-            .map { it[1] }  // Extract just the file from the tuple
-            .branch { 
-                do_drep: true
-                no_drep: false
-            }
-
+        if_drep = drep_decision.run_drep.map { it[1] }
+        
         DREP(
-            drep_out.do_drep,
+            if_drep,
             genome_ch.collect(),
-            params.drep_ani_threshold
+            params.drep_ani_threshold,
+            params.threads
         )
 
         // Create a channel for the final dRep output
-        drep_result = DREP.out.drep_dir
-            .mix(Channel.value(file("NO_DREP_DIR")))
-            .first()
+        drep_result = DREP.out.drep_dir.ifEmpty(file("NO_DREP_DIR"))
 
         // Generate summary report
         SUMMARY_REPORT(
