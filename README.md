@@ -75,10 +75,11 @@ phorager prophage --genome /path/to/genomes
 
 **For detailed documentation, see the [Wiki](../../wiki):**
 
-- [Configuration Management](../../wiki/Configuration) - Backend setup and locations
-- [Installation Management](../../wiki/Installation) - Tools and database installation
+- [Configuration](../../wiki/Configuration) - Backend setup and locations
+- [Installation](../../wiki/Installation) - Tools and database installation
 - [Bacterial Workflow](../../wiki/Bacterial-Workflow) - Genome quality control and dereplication
 - [Prophage Workflow](../../wiki/Prophage-Workflow) - Integrated prophage detection
+- [Annotation Workflow](../../wiki/Annotation-Workflow) - Prophage annotation and clustering
 
 ## Getting Help
 
