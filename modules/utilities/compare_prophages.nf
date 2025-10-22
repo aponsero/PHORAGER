@@ -130,6 +130,11 @@ try:
     
     df = pd.concat([genomad_df, vibrant_df], ignore_index=True)
     
+    # Clean up the Contig column by removing fragment* suffixes
+    # This fixes the VIBRANT naming issue where 'fragment_12' etc. is appended
+    if not df.empty:
+        df['Contig'] = df['Contig'].str.replace(r'_fragment.*$', '', regex=True)
+    
     if df.empty:
         pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool']).to_csv(
             genome_name + '_consolidated_coordinates.tsv', sep='\\t', index=False)
@@ -286,6 +291,11 @@ try:
     vibrant_df = read_results_file("${vibrant_coords}")
     
     df = pd.concat([genomad_df, vibrant_df], ignore_index=True)
+    
+    # Clean up the Contig column by removing fragment* suffixes
+    # This fixes the VIBRANT naming issue where 'fragment_12' etc. is appended
+    if not df.empty:
+        df['Contig'] = df['Contig'].str.replace(r'_fragment.*$', '', regex=True)
     
     if df.empty:
         pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool']).to_csv(

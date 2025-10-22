@@ -147,7 +147,7 @@ workflow annotation {
             
             // Run annotation tools (only executed if SPLIT_FASTA produces output)
             PHAROKKA(
-                SPLIT_FASTA.out.split_fastas.flatten().ifEmpty([]),
+                SPLIT_FASTA.out.split_fastas.collect().ifEmpty([]),
                 pharokka_db_ch
             )
             PHOLD(

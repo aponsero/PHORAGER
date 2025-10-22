@@ -46,7 +46,7 @@ process DREP {
         
         # Run dRep using singularity
         singularity exec ${container_path} \\
-            dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads}
+            dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads} --S_algorithm fastANI -pa 0.95 --greedy_secondary_clustering
         """
     
     else if (workflow.profile.contains('conda'))
@@ -62,7 +62,7 @@ process DREP {
         done < ${passed_list}
 
         # Run dRep with the configurable ANI threshold
-        dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads}
+        dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads} --S_algorithm fastANI -pa 0.95 --greedy_secondary_clustering
         """
         
     else
