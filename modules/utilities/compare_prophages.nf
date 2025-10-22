@@ -133,7 +133,7 @@ try:
     # Clean up the Contig column by removing fragment* suffixes
     # This fixes the VIBRANT naming issue where 'fragment_12' etc. is appended
     if not df.empty:
-        df['Contig'] = df['Contig'].str.replace(r'_fragment.*$', '', regex=True)
+        df['Contig'] = df['Contig'].str.replace(r"_fragment.", "", regex=True)
     
     if df.empty:
         pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool']).to_csv(
@@ -295,7 +295,7 @@ try:
     # Clean up the Contig column by removing fragment* suffixes
     # This fixes the VIBRANT naming issue where 'fragment_12' etc. is appended
     if not df.empty:
-        df['Contig'] = df['Contig'].str.replace(r'_fragment.*$', '', regex=True)
+        df['Contig'] = df['Contig'].str.replace(r"_fragment.", "", regex=True)
     
     if df.empty:
         pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool']).to_csv(

@@ -43,7 +43,7 @@ process PHAROKKA {
                 name=\$(basename \$fasta .fasta)
                 echo "Processing \$fasta -> \${name}_pharokka"
                 
-                singularity exec ${container_path} \\
+                singularity exec --cleanenv ${container_path} \\
                     pharokka.py -i \$fasta \\
                                 -o "\${name}_pharokka" \\
                                 -d ${pharokka_db} \\
