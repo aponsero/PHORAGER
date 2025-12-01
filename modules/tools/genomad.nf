@@ -1,6 +1,6 @@
 process GENOMAD {
     tag "GenoMAD on ${genome.simpleName}"
-    publishDir "${params.outdir}/2.Prophage_detection/Proph1_geNomad/${genome.simpleName}", mode: 'copy'
+    publishDir "${params.outdir}/2.Prophage_detection/Proph1_geNomad/${genome.simpleName}", mode: 'symlink', enabled: false
 
     input:
     each path(genome)

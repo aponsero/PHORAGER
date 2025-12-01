@@ -35,7 +35,7 @@ import re
 
 def read_results_file(filepath):
     if os.path.exists(filepath) and os.path.getsize(filepath) > 0 and not filepath.endswith('NO_RESULTS'):
-        return pd.read_csv(filepath, sep='\\t', dtype=str)
+        return pd.read_csv(filepath, sep='\\t', dtype=str, keep_default_na=False)
     return pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool'])
 
 def find_max_overlap(group, contig_data):
@@ -83,15 +83,18 @@ def extract_prophage_sequences(genome_file, result_df, output_fasta):
             full_name = full_names.get(contig_prefix, contig_prefix)
             
             if sequence is not None:
+                # Get folder name from the row
+                folder_name = row['Folder']
+                
                 if str(start).lower() == 'all' and str(end).lower() == 'all':
-                    header = ">" + full_name + "_complete"
+                    header = ">" + folder_name + "_" + full_name + "_complete"
                     output.write(header + "\\n" + str(sequence) + "\\n")
                     extracted_count += 1
                 else:
                     try:
                         start = int(float(start))
                         end = int(float(end))
-                        header = ">" + full_name + "_" + str(start) + "_" + str(end)
+                        header = ">" + folder_name + "_" + full_name + "_" + str(start) + "_" + str(end)
                         subsequence = sequence[start - 1:end]
                         output.write(header + "\\n" + str(subsequence) + "\\n")
                         extracted_count += 1
@@ -133,7 +136,7 @@ try:
     # Clean up the Contig column by removing fragment* suffixes
     # This fixes the VIBRANT naming issue where 'fragment_12' etc. is appended
     if not df.empty:
-        df['Contig'] = df['Contig'].str.replace(r"_fragment.", "", regex=True)
+        df['Contig'] = df['Contig'].str.replace(r"_fragment_\\d+", "", regex=True)
     
     if df.empty:
         pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool']).to_csv(
@@ -197,7 +200,7 @@ import re
 
 def read_results_file(filepath):
     if os.path.exists(filepath) and os.path.getsize(filepath) > 0 and not filepath.endswith('NO_RESULTS'):
-        return pd.read_csv(filepath, sep='\\t', dtype=str)
+        return pd.read_csv(filepath, sep='\\t', dtype=str, keep_default_na=False)
     return pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool'])
 
 def find_max_overlap(group, contig_data):
@@ -245,15 +248,18 @@ def extract_prophage_sequences(genome_file, result_df, output_fasta):
             full_name = full_names.get(contig_prefix, contig_prefix)
             
             if sequence is not None:
+                # Get folder name from the row
+                folder_name = row['Folder']
+                
                 if str(start).lower() == 'all' and str(end).lower() == 'all':
-                    header = ">" + full_name + "_complete"
+                    header = ">" + folder_name + "_" + full_name + "_complete"
                     output.write(header + "\\n" + str(sequence) + "\\n")
                     extracted_count += 1
                 else:
                     try:
                         start = int(float(start))
                         end = int(float(end))
-                        header = ">" + full_name + "_" + str(start) + "_" + str(end)
+                        header = ">" + folder_name + "_" + full_name + "_" + str(start) + "_" + str(end)
                         subsequence = sequence[start - 1:end]
                         output.write(header + "\\n" + str(subsequence) + "\\n")
                         extracted_count += 1
@@ -295,7 +301,7 @@ try:
     # Clean up the Contig column by removing fragment* suffixes
     # This fixes the VIBRANT naming issue where 'fragment_12' etc. is appended
     if not df.empty:
-        df['Contig'] = df['Contig'].str.replace(r"_fragment.", "", regex=True)
+        df['Contig'] = df['Contig'].str.replace(r"_fragment_\\d+", "", regex=True)
     
     if df.empty:
         pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool']).to_csv(

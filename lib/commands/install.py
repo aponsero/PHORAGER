@@ -8,7 +8,6 @@ Supports all bacterial genome, prophage detection, and annotation tools.
 import argparse
 import json
 import sys
-import os
 import subprocess
 from pathlib import Path
 from typing import List, Optional

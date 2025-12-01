@@ -37,10 +37,6 @@ Phorager provides an integrated workflow for:
 
 ## Quick Start
 
-New to Phorager? Here is where you can start : [Quick start](../../wiki/Quick-Start)
-
-Briefly, the pipeline will require you to go through these broad steps: 
-
 ### 1. Configure
 Set your preferred installation backend and locations:
 

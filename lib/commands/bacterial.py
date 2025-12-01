@@ -9,8 +9,8 @@ import argparse
 import json
 import sys
 import subprocess
-import multiprocessing
 import os
+import multiprocessing
 from pathlib import Path
 from typing import List, Optional
 

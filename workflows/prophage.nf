@@ -4,6 +4,7 @@ include { PARSE_GENOMAD } from '../modules/utilities/parse_genomad'
 include { PARSE_VIBRANT } from '../modules/utilities/parse_vibrant'
 include { COMPARE_PROPHAGES } from '../modules/utilities/compare_prophages'
 include { PROPHAGE_SUMMARY } from '../modules/utilities/prophage_summary'
+include { RENAME_CONTIGS } from '../modules/utilities/rename_contigs'
 
 workflow prophage {
     main:
@@ -39,6 +40,18 @@ workflow prophage {
             error "Input path does not exist or is not accessible: ${params.genome}"
         }
 
+        // Rename contigs for unique identifiers (optional)
+        if (params.rename_contigs) {
+            log.info "Renaming contigs to ensure unique identifiers..."
+            RENAME_CONTIGS(genomes.collect())
+            genomes_for_tools = RENAME_CONTIGS.out.renamed_genomes.flatten()
+            mapping_file = RENAME_CONTIGS.out.mapping
+        } else {
+            log.info "Skipping contig renaming (rename_contigs = false)"
+            genomes_for_tools = genomes
+            mapping_file = Channel.empty()
+        }
+
         // Database path construction from config specs
         genomad_db_ch = Channel.fromPath("${params.database_location}/${params.database_specs.genomad.directory}")
         vibrant_db_ch = Channel.fromPath("${params.database_location}/${params.database_specs.vibrant.directory}")
@@ -46,7 +59,7 @@ workflow prophage {
         // Tool execution with conditional logic
         if (params.run_genomad) {
             log.info "Running GenoMAD analysis with preset: ${params.genomad_preset}"
-            GENOMAD(genomes, genomad_db_ch)
+            GENOMAD(genomes_for_tools, genomad_db_ch)
             PARSE_GENOMAD(GENOMAD.out.results)
             genomad_coords = PARSE_GENOMAD.out.coordinates
         } else {
@@ -56,7 +69,7 @@ workflow prophage {
 
         if (params.run_vibrant) {
             log.info "Running VIBRANT analysis with minimum length: ${params.vibrant_min_length} bp"
-            VIBRANT(genomes, vibrant_db_ch)
+            VIBRANT(genomes_for_tools, vibrant_db_ch)
             PARSE_VIBRANT(VIBRANT.out.results)
             vibrant_coords = PARSE_VIBRANT.out.coordinates
         } else {
@@ -70,7 +83,7 @@ workflow prophage {
         }
 
         // Create a channel that contains genome files with their names
-        genome_ch = genomes.map { genome_file ->
+        genome_ch = genomes_for_tools.map { genome_file ->
             def genome_name = genome_file.name.toString().tokenize('.')[0]
             return tuple(genome_name, genome_file)
         }

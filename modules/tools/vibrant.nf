@@ -1,7 +1,8 @@
 process VIBRANT {
     tag "VIBRANT on ${genome.simpleName}"
     publishDir "${params.outdir}/2.Prophage_detection/Proph2_VIBRANT/${genome.simpleName}", 
-        mode: 'copy',
+        mode: 'symlink',
+        enabled: false,
         saveAs: { filename -> 
             if (filename.startsWith("VIBRANT_")) {
                 return "vibrant_output"
