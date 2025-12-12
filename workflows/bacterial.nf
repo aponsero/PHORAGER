@@ -40,7 +40,8 @@ workflow bacterial {
             if_drep,
             genome_ch.collect(),
             params.drep_ani_threshold,
-            params.threads
+            params.threads,
+            drep_decision.run_drep.map { it[0] }  // genome count
         )
 
         // Create a channel for the final dRep output

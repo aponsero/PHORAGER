@@ -7,6 +7,7 @@ process DREP {
     path genomes
     val ani_threshold
     val threads
+    val genome_count
 
     output:
     path "drep_output", optional: true, emit: drep_dir
@@ -44,9 +45,17 @@ process DREP {
         # Set matplotlib configuration directory to avoid permission issues
         export MPLCONFIGDIR=/tmp/matplotlib_config
         
-        # Run dRep using singularity
-        singularity exec ${container_path} \\
-            dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads} --S_algorithm fastANI -pa 0.95 --greedy_secondary_clustering
+        # Run dRep using singularity with conditional greedy clustering
+        # For small datasets (< 10 genomes), skip greedy clustering to avoid centrality calculation errors
+        if [ ${genome_count} -lt 10 ]; then
+            echo "Small dataset detected (${genome_count} genomes). Running dRep without greedy clustering."
+            singularity exec ${container_path} \\
+                dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads} --S_algorithm fastANI -pa 0.95
+        else
+            echo "Large dataset detected (${genome_count} genomes). Running dRep with greedy clustering."
+            singularity exec ${container_path} \\
+                dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads} --S_algorithm fastANI -pa 0.95 --greedy_secondary_clustering
+        fi
         """
     
     else if (workflow.profile.contains('conda'))
@@ -61,8 +70,15 @@ process DREP {
             cp \$(find ${genomes} -name "\${genome_name}*.fa" -o -name "\${genome_name}*.fasta" -o -name "\${genome_name}*.fna") filtered_genomes/
         done < ${passed_list}
 
-        # Run dRep with the configurable ANI threshold
-        dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads}
+        # Run dRep with conditional greedy clustering
+        # For small datasets (< 10 genomes), skip greedy clustering to avoid centrality calculation errors
+        if [ ${genome_count} -lt 10 ]; then
+            echo "Small dataset detected (${genome_count} genomes). Running dRep without greedy clustering."
+            dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads} --S_algorithm fastANI -pa 0.95
+        else
+            echo "Large dataset detected (${genome_count} genomes). Running dRep with greedy clustering."
+            dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads} --S_algorithm fastANI -pa 0.95 --greedy_secondary_clustering
+        fi
         """
         
     else
