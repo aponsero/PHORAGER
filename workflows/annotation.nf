@@ -211,7 +211,7 @@ workflow annotation {
 
         // Phase 3: Clustering pipeline - only if sequences available
         CLUSTER_PHAGES(
-            clustering_input.ifEmpty([]),
+            clustering_input,
             params.clustering_min_ani,
             params.clustering_min_coverage,
             file(params.anicalc_script),
@@ -220,7 +220,7 @@ workflow annotation {
 
         // Extract cluster representatives
         EXTRACT_REPRESENTATIVES(
-            CLUSTER_PHAGES.out.for_extraction.ifEmpty([])
+            CLUSTER_PHAGES.out.for_extraction
         )
 
         // Phase 4: Generate comprehensive summary - ALWAYS RUN

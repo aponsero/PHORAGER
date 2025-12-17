@@ -3,7 +3,7 @@ process PHOLD {
     publishDir "${params.outdir}/3.Annotation/Anno4_PHOLD", mode: 'copy'
 
     input:
-    path "*_pharokka"
+    path pharokka_dirs
     path phold_db
 
     output:
@@ -38,7 +38,7 @@ process PHOLD {
         fi
         
         # Run phold on each pharokka output
-        for pharokka_dir in *_pharokka; do
+        for pharokka_dir in ${pharokka_dirs}; do
             if [ -d "\$pharokka_dir" ]; then
                 # Get the original sequence name from the directory name
                 original_name=\$(echo \$pharokka_dir | sed 's/_pharokka\$//')
@@ -82,7 +82,7 @@ process PHOLD {
         echo "PHOLD database: ${phold_db}"
         
         # Run phold on each pharokka output
-        for pharokka_dir in *_pharokka; do
+        for pharokka_dir in ${pharokka_dirs}; do
             if [ -d "\$pharokka_dir" ]; then
                 # Get the original sequence name from the directory name
                 original_name=\$(echo \$pharokka_dir | sed 's/_pharokka\$//')

@@ -154,25 +154,49 @@ def filter_entries(df, mode, ph_perc, ph_total, pl_perc, pl_total):
     if df.empty:
         print("Warning: DataFrame is empty, no filtering applied")
         return df
-        
+    
+    # First, merge annotations by sequence name (in case both tools annotated the same sequence)
+    # Add Sequence column if not already present
+    if 'Sequence' not in df.columns:
+        df['Sequence'] = df['Parent'].str.replace('_pharokka\$', '', regex=True).str.replace('_phold\$', '', regex=True)
+    
+    # Identify which tool(s) are present in the data
+    has_pharokka = df['Parent'].str.endswith('_pharokka').any()
+    has_phold = df['Parent'].str.endswith('_phold').any()
+    
+    print(f"Data contains: Pharokka={has_pharokka}, PHOLD={has_phold}")
+    
+    # Merge duplicates: for each sequence, keep the annotation with highest structural gene count
+    if has_pharokka and has_phold:
+        print("Merging annotations from both tools by sequence name...")
+        merged_df = df.loc[df.groupby('Sequence')['Total Structural Genes'].idxmax()]
+        print(f"Merged {len(df)} rows into {len(merged_df)} unique sequences")
+    else:
+        merged_df = df
+        print(f"Single tool detected, no merging needed: {len(merged_df)} sequences")
+    
+    # Apply filtering based on mode
     if mode == 'pharokka':
-        filtered = df[(df['Total Structural Genes'] >= ph_total) & 
-                     (df['% Structural Genes'] >= ph_perc)]
-        print(f"Pharokka filtering: {len(filtered)} sequences passed out of {len(df)}")
+        # Filter using Pharokka thresholds (works for Pharokka-only or merged data)
+        filtered = merged_df[(merged_df['Total Structural Genes'] >= ph_total) & 
+                            (merged_df['% Structural Genes'] >= ph_perc)]
+        print(f"Pharokka filtering: {len(filtered)} sequences passed out of {len(merged_df)}")
         return filtered
     elif mode == 'phold':
-        filtered = df[(df['Total Structural Genes'] >= pl_total) & 
-                     (df['% Structural Genes'] >= pl_perc)]
-        print(f"PHOLD filtering: {len(filtered)} sequences passed out of {len(df)}")
+        # Filter using PHOLD thresholds (works for PHOLD-only or merged data)
+        filtered = merged_df[(merged_df['Total Structural Genes'] >= pl_total) & 
+                            (merged_df['% Structural Genes'] >= pl_perc)]
+        print(f"PHOLD filtering: {len(filtered)} sequences passed out of {len(merged_df)}")
         return filtered
     else:  # both
-        pharokka_filtered = df[(df['Total Structural Genes'] >= ph_total) & 
-                             (df['% Structural Genes'] >= ph_perc)]
-        phold_filtered = df[(df['Total Structural Genes'] >= pl_total) & 
-                          (df['% Structural Genes'] >= pl_perc)]
-        combined = pd.concat([pharokka_filtered, phold_filtered]).drop_duplicates()
-        print(f"Combined filtering: {len(combined)} sequences passed out of {len(df)}")
-        return combined
+        # Accept sequences that pass either Pharokka OR PHOLD thresholds
+        pharokka_pass = (merged_df['Total Structural Genes'] >= ph_total) & \
+                       (merged_df['% Structural Genes'] >= ph_perc)
+        phold_pass = (merged_df['Total Structural Genes'] >= pl_total) & \
+                    (merged_df['% Structural Genes'] >= pl_perc)
+        filtered = merged_df[pharokka_pass | phold_pass]
+        print(f"Combined filtering (OR logic): {len(filtered)} sequences passed out of {len(merged_df)}")
+        return filtered
 
 # Main processing
 print("Starting annotation parsing and filtering...")
@@ -187,16 +211,17 @@ phold_df = parse_phold_output()
 print(f"PHOLD results: {len(phold_df)} sequences")
 
 # Combine and filter
-combined_df = pd.concat([pharokka_df, phold_df]).drop_duplicates()
-print(f"Combined results: {len(combined_df)} sequences")
+combined_df = pd.concat([pharokka_df, phold_df], ignore_index=True)
+print(f"Combined results: {len(combined_df)} rows")
 
+# Filter entries (merging by sequence name happens inside filter_entries)
 filtered_df = filter_entries(combined_df, "${filter_mode}", 
                            ${pharokka_perc}, ${pharokka_total},
                            ${phold_perc}, ${phold_total})
 
-print(f"Final filtered results: {len(filtered_df)} sequences")
+print(f"Final filtered results: {len(filtered_df)} unique sequences")
 
-# Write count to file
+# Write count to file (count of unique sequences)
 with open("annotation_count.txt", "w") as count_f:
     count_f.write(str(len(filtered_df)))
 
@@ -219,8 +244,8 @@ if len(filtered_df) == 0:
         pass
     print("Created empty output files")
 else:
-    filtered_names = [name.replace('_pharokka', '').replace('_phold', '') 
-                     for name in filtered_df['Parent']]
+    # Use Sequence column for matching (already stripped of tool suffix)
+    filtered_names = list(filtered_df['Sequence'])
     
     print(f"Looking for sequences with names: {filtered_names}")
     
@@ -383,25 +408,49 @@ def filter_entries(df, mode, ph_perc, ph_total, pl_perc, pl_total):
     if df.empty:
         print("Warning: DataFrame is empty, no filtering applied")
         return df
-        
+    
+    # First, merge annotations by sequence name (in case both tools annotated the same sequence)
+    # Add Sequence column if not already present
+    if 'Sequence' not in df.columns:
+        df['Sequence'] = df['Parent'].str.replace('_pharokka\$', '', regex=True).str.replace('_phold\$', '', regex=True)
+    
+    # Identify which tool(s) are present in the data
+    has_pharokka = df['Parent'].str.endswith('_pharokka').any()
+    has_phold = df['Parent'].str.endswith('_phold').any()
+    
+    print(f"Data contains: Pharokka={has_pharokka}, PHOLD={has_phold}")
+    
+    # Merge duplicates: for each sequence, keep the annotation with highest structural gene count
+    if has_pharokka and has_phold:
+        print("Merging annotations from both tools by sequence name...")
+        merged_df = df.loc[df.groupby('Sequence')['Total Structural Genes'].idxmax()]
+        print(f"Merged {len(df)} rows into {len(merged_df)} unique sequences")
+    else:
+        merged_df = df
+        print(f"Single tool detected, no merging needed: {len(merged_df)} sequences")
+    
+    # Apply filtering based on mode
     if mode == 'pharokka':
-        filtered = df[(df['Total Structural Genes'] >= ph_total) & 
-                     (df['% Structural Genes'] >= ph_perc)]
-        print(f"Pharokka filtering: {len(filtered)} sequences passed out of {len(df)}")
+        # Filter using Pharokka thresholds (works for Pharokka-only or merged data)
+        filtered = merged_df[(merged_df['Total Structural Genes'] >= ph_total) & 
+                            (merged_df['% Structural Genes'] >= ph_perc)]
+        print(f"Pharokka filtering: {len(filtered)} sequences passed out of {len(merged_df)}")
         return filtered
     elif mode == 'phold':
-        filtered = df[(df['Total Structural Genes'] >= pl_total) & 
-                     (df['% Structural Genes'] >= pl_perc)]
-        print(f"PHOLD filtering: {len(filtered)} sequences passed out of {len(df)}")
+        # Filter using PHOLD thresholds (works for PHOLD-only or merged data)
+        filtered = merged_df[(merged_df['Total Structural Genes'] >= pl_total) & 
+                            (merged_df['% Structural Genes'] >= pl_perc)]
+        print(f"PHOLD filtering: {len(filtered)} sequences passed out of {len(merged_df)}")
         return filtered
     else:  # both
-        pharokka_filtered = df[(df['Total Structural Genes'] >= ph_total) & 
-                             (df['% Structural Genes'] >= ph_perc)]
-        phold_filtered = df[(df['Total Structural Genes'] >= pl_total) & 
-                          (df['% Structural Genes'] >= pl_perc)]
-        combined = pd.concat([pharokka_filtered, phold_filtered]).drop_duplicates()
-        print(f"Combined filtering: {len(combined)} sequences passed out of {len(df)}")
-        return combined
+        # Accept sequences that pass either Pharokka OR PHOLD thresholds
+        pharokka_pass = (merged_df['Total Structural Genes'] >= ph_total) & \
+                       (merged_df['% Structural Genes'] >= ph_perc)
+        phold_pass = (merged_df['Total Structural Genes'] >= pl_total) & \
+                    (merged_df['% Structural Genes'] >= pl_perc)
+        filtered = merged_df[pharokka_pass | phold_pass]
+        print(f"Combined filtering (OR logic): {len(filtered)} sequences passed out of {len(merged_df)}")
+        return filtered
 
 # Main processing
 print("Starting annotation parsing and filtering...")
@@ -416,16 +465,17 @@ phold_df = parse_phold_output()
 print(f"PHOLD results: {len(phold_df)} sequences")
 
 # Combine and filter
-combined_df = pd.concat([pharokka_df, phold_df]).drop_duplicates()
-print(f"Combined results: {len(combined_df)} sequences")
+combined_df = pd.concat([pharokka_df, phold_df], ignore_index=True)
+print(f"Combined results: {len(combined_df)} rows")
 
+# Filter entries (merging by sequence name happens inside filter_entries)
 filtered_df = filter_entries(combined_df, "${filter_mode}", 
                            ${pharokka_perc}, ${pharokka_total},
                            ${phold_perc}, ${phold_total})
 
-print(f"Final filtered results: {len(filtered_df)} sequences")
+print(f"Final filtered results: {len(filtered_df)} unique sequences")
 
-# Write count to file
+# Write count to file (count of unique sequences)
 with open("annotation_count.txt", "w") as count_f:
     count_f.write(str(len(filtered_df)))
 
@@ -448,8 +498,8 @@ if len(filtered_df) == 0:
         pass
     print("Created empty output files")
 else:
-    filtered_names = [name.replace('_pharokka', '').replace('_phold', '') 
-                     for name in filtered_df['Parent']]
+    # Use Sequence column for matching (already stripped of tool suffix)
+    filtered_names = list(filtered_df['Sequence'])
     
     print(f"Looking for sequences with names: {filtered_names}")
     
