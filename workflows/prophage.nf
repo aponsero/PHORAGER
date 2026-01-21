@@ -88,19 +88,27 @@ workflow prophage {
             return tuple(genome_name, genome_file)
         }
 
-        // Channel combination and comparison
+        // Channel combination with intelligent file assignment
+        // This ensures GenoMAD and VIBRANT files are always in the correct positions
         genomad_coords
             .mix(vibrant_coords)
             .groupTuple()
-            .combine(genome_ch, by: 0)  // Combine with genome files based on name
-            .map { genome_name, coords_files, genome_file -> 
-                if (coords_files.size() == 1) {
-                    return tuple(genome_name, coords_files[0], 
-                           file("${params.outdir}/NO_RESULTS_${genome_name}.tsv"),
-                           genome_file)
-                } else {
-                    return tuple(genome_name, coords_files[0], coords_files[1], genome_file)
+            .combine(genome_ch, by: 0)
+            .map { genome_name, coords_files, genome_file ->
+                // Intelligently assign files based on their naming pattern
+                def genomad_file = coords_files.find { it.name.contains('genomad') }
+                def vibrant_file = coords_files.find { it.name.contains('vibrant') }
+                
+                // Create placeholder file paths if tool didn't produce results
+                // The Python script checks for 'NO_RESULTS' suffix and returns empty DataFrame
+                if (!genomad_file) {
+                    genomad_file = file("NO_GENOMAD_RESULTS_${genome_name}.tsv")
                 }
+                if (!vibrant_file) {
+                    vibrant_file = file("NO_VIBRANT_RESULTS_${genome_name}.tsv")
+                }
+                
+                return tuple(genome_name, genomad_file, vibrant_file, genome_file)
             }
             .set { comparison_input }
 

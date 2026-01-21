@@ -31,7 +31,6 @@ import pandas as pd
 import os
 from collections import defaultdict
 from Bio import SeqIO
-import re
 
 def read_results_file(filepath):
     if os.path.exists(filepath) and os.path.getsize(filepath) > 0 and not filepath.endswith('NO_RESULTS'):
@@ -64,41 +63,40 @@ def find_max_overlap(group, contig_data):
             contig_data[contig_id].append((current_start, current_end, folder))
 
 def extract_prophage_sequences(genome_file, result_df, output_fasta):
+    # Store sequences using full contig ID (exact matching)
     sequences_by_contig = {}
-    full_names = {}
     
     for record in SeqIO.parse(genome_file, "fasta"):
-        contig_prefix = re.split(r'[_ .]', record.id)[0]
-        sequences_by_contig[contig_prefix] = record.seq
-        full_names[contig_prefix] = record.id
+        sequences_by_contig[record.id] = record.seq
     
     extracted_count = 0
     with open(output_fasta, "w") as output:
         for _, row in result_df.iterrows():
-            contig_prefix = re.split(r'[_ .]', row['Contig'])[0]
+            # Use exact contig ID from coordinates
+            contig_id = row['Contig']
             start = row['Start']
             end = row['End']
             
-            sequence = sequences_by_contig.get(contig_prefix, None)
-            full_name = full_names.get(contig_prefix, contig_prefix)
+            sequence = sequences_by_contig.get(contig_id, None)
             
             if sequence is not None:
                 if str(start).lower() == 'all' and str(end).lower() == 'all':
-                    header = ">" + full_name + "_complete"
+                    header = ">" + contig_id + "_complete"
                     output.write(header + "\\n" + str(sequence) + "\\n")
                     extracted_count += 1
                 else:
                     try:
                         start = int(float(start))
                         end = int(float(end))
-                        header = ">" + full_name + "_" + str(start) + "_" + str(end)
+                        header = ">" + contig_id + "_" + str(start) + "_" + str(end)
                         subsequence = sequence[start - 1:end]
                         output.write(header + "\\n" + str(subsequence) + "\\n")
                         extracted_count += 1
                     except (ValueError, TypeError):
-                        print("Skipping invalid coordinates for contig " + full_name + ": " + str(start) + ", " + str(end))
+                        print("Skipping invalid coordinates for contig " + contig_id + ": " + str(start) + ", " + str(end))
             else:
-                print("Warning: Contig " + full_name + " not found in genome file")
+                print("Warning: Contig " + contig_id + " not found in genome file")
+                print("Available contigs: " + ", ".join(list(sequences_by_contig.keys())[:5]) + "...")
                 
     return extracted_count
 
@@ -172,6 +170,8 @@ try:
         
 except Exception as e:
     print("Error processing " + genome_name + ": " + str(e))
+    import traceback
+    traceback.print_exc()
     pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool']).to_csv(
         genome_name + '_consolidated_coordinates.tsv', sep='\\t', index=False)
     with open(genome_name + '_comparison_summary.txt', 'w') as f:
@@ -193,7 +193,6 @@ import pandas as pd
 import os
 from collections import defaultdict
 from Bio import SeqIO
-import re
 
 def read_results_file(filepath):
     if os.path.exists(filepath) and os.path.getsize(filepath) > 0 and not filepath.endswith('NO_RESULTS'):
@@ -226,41 +225,40 @@ def find_max_overlap(group, contig_data):
             contig_data[contig_id].append((current_start, current_end, folder))
 
 def extract_prophage_sequences(genome_file, result_df, output_fasta):
+    # Store sequences using full contig ID (exact matching)
     sequences_by_contig = {}
-    full_names = {}
     
     for record in SeqIO.parse(genome_file, "fasta"):
-        contig_prefix = re.split(r'[_ .]', record.id)[0]
-        sequences_by_contig[contig_prefix] = record.seq
-        full_names[contig_prefix] = record.id
+        sequences_by_contig[record.id] = record.seq
     
     extracted_count = 0
     with open(output_fasta, "w") as output:
         for _, row in result_df.iterrows():
-            contig_prefix = re.split(r'[_ .]', row['Contig'])[0]
+            # Use exact contig ID from coordinates
+            contig_id = row['Contig']
             start = row['Start']
             end = row['End']
             
-            sequence = sequences_by_contig.get(contig_prefix, None)
-            full_name = full_names.get(contig_prefix, contig_prefix)
+            sequence = sequences_by_contig.get(contig_id, None)
             
             if sequence is not None:
                 if str(start).lower() == 'all' and str(end).lower() == 'all':
-                    header = ">" + full_name + "_complete"
+                    header = ">" + contig_id + "_complete"
                     output.write(header + "\\n" + str(sequence) + "\\n")
                     extracted_count += 1
                 else:
                     try:
                         start = int(float(start))
                         end = int(float(end))
-                        header = ">" + full_name + "_" + str(start) + "_" + str(end)
+                        header = ">" + contig_id + "_" + str(start) + "_" + str(end)
                         subsequence = sequence[start - 1:end]
                         output.write(header + "\\n" + str(subsequence) + "\\n")
                         extracted_count += 1
                     except (ValueError, TypeError):
-                        print("Skipping invalid coordinates for contig " + full_name + ": " + str(start) + ", " + str(end))
+                        print("Skipping invalid coordinates for contig " + contig_id + ": " + str(start) + ", " + str(end))
             else:
-                print("Warning: Contig " + full_name + " not found in genome file")
+                print("Warning: Contig " + contig_id + " not found in genome file")
+                print("Available contigs: " + ", ".join(list(sequences_by_contig.keys())[:5]) + "...")
                 
     return extracted_count
 
@@ -334,6 +332,8 @@ try:
         
 except Exception as e:
     print("Error processing " + genome_name + ": " + str(e))
+    import traceback
+    traceback.print_exc()
     pd.DataFrame(columns=['Folder', 'Contig', 'Start', 'End', 'Tool']).to_csv(
         genome_name + '_consolidated_coordinates.tsv', sep='\\t', index=False)
     with open(genome_name + '_comparison_summary.txt', 'w') as f:
