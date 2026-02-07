@@ -142,18 +142,44 @@ workflow annotation {
                 .combine(count_result.found)
                 .map { fasta, count -> fasta }
                 .set { fasta_for_split }
-            
-            SPLIT_FASTA(fasta_for_split.ifEmpty([]))
-            
-            // Run annotation tools (only executed if SPLIT_FASTA produces output)
-            PHAROKKA(
-                SPLIT_FASTA.out.split_fastas.collect().ifEmpty([]),
-                pharokka_db_ch
-            )
-            PHOLD(
-                PHAROKKA.out.results.ifEmpty([]),
-                phold_db_ch
-            )
+
+
+	    SPLIT_FASTA(fasta_for_split.ifEmpty([]))
+
+	   // Wait for SPLIT_FASTA to complete, then create channel from its work directory
+	   SPLIT_FASTA.out.file_list
+    		.map { file_list ->
+        		// Get the parent directory (SPLIT_FASTA work dir) where the fastas are
+        		def work_dir = file_list.parent
+        		// Read the file list
+        		def files = file_list.text.split('\n')
+            			.findAll { it.trim() && !it.contains('filtered_prophages') }  // Remove empty lines
+            			.collect { filename -> file("${work_dir}/${filename.trim()}") }
+        		return files
+    	   	 }
+    	    	.flatten()
+    	    	.set { individual_fastas }
+
+	    PHAROKKA(
+    		individual_fastas,
+    		pharokka_db_ch
+	   )
+
+	    // Create channel from Pharokka output directories
+	    PHAROKKA.out.results
+            	.collect()
+            	.map { results_list ->
+        	// results_list is a list of directories from all PHAROKKA processes
+        	return results_list
+    	     }
+    	     .flatten()
+    	     .set { individual_pharokka_dirs }
+
+	     // Run PHOLD on each Pharokka result
+	     PHOLD(
+		    individual_pharokka_dirs.ifEmpty([]),
+		    phold_db_ch
+	     ) 
             
             // Parse and filter annotation results
             PARSE_FILTER_ANNOTATIONS(

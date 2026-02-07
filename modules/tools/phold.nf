@@ -1,9 +1,9 @@
 process PHOLD {
-    tag "PHOLD annotation on multiple sequences"
-    publishDir "${params.outdir}/3.Annotation/Anno4_PHOLD", mode: 'copy'
+    tag "PHOLD annotation on ${pharokka_dir.simpleName}"
+    publishDir "${params.outdir}/3.Annotation/Anno4_PHOLD", mode: 'copy', enabled: false
 
     input:
-    path pharokka_dirs
+    each path(pharokka_dir) 
     path phold_db
 
     output:
@@ -37,43 +37,58 @@ process PHOLD {
             echo "PHOLD container already exists, using cached version."
         fi
         
-        # Run phold on each pharokka output
-        for pharokka_dir in ${pharokka_dirs}; do
-            if [ -d "\$pharokka_dir" ]; then
-                # Get the original sequence name from the directory name
-                original_name=\$(echo \$pharokka_dir | sed 's/_pharokka\$//')
-                phold_output="\${original_name}_phold"
-                
-                echo "Processing \$pharokka_dir -> \$phold_output"
-                
-                # Verify Pharokka GenBank file exists
-                if [ ! -f "\${pharokka_dir}/pharokka.gbk" ]; then
-                    echo "ERROR: Pharokka GenBank file not found at \${pharokka_dir}/pharokka.gbk"
-                    echo "Pharokka directory contents:"
-                    ls -la \${pharokka_dir}/
-                    exit 1
-                fi
-                
-                singularity exec ${container_path} \\
-                    phold run -i \${pharokka_dir}/pharokka.gbk \\
-                              -o \$phold_output \\
-                              -d ${phold_db} \\
-                              -t ${task.cpus} \\
-                              --cpu
-                
-                # Verify expected output files exist
-                if [ ! -d "\$phold_output" ]; then
-                    echo "ERROR: PHOLD output directory not found for \$pharokka_dir"
-                    echo "Current directory contents:"
-                    ls -la
-                    exit 1
-                fi
-                
-                echo "Successfully processed \$pharokka_dir"
-            fi
-        done
+        # Removed loop - process single pharokka output
+        # Get the original sequence name from the directory name
+        original_name=\$(echo ${pharokka_dir} | sed 's/_pharokka\$//')
+        phold_output="\${original_name}_phold"
         
-        echo "PHOLD annotation completed successfully for all sequences"
+        echo "Processing ${pharokka_dir} -> \$phold_output"
+        
+        # Verify Pharokka GenBank file exists
+        if [ ! -f "${pharokka_dir}/pharokka.gbk" ]; then
+            echo "ERROR: Pharokka GenBank file not found at ${pharokka_dir}/pharokka.gbk"
+            echo "Pharokka directory contents:"
+            ls -la ${pharokka_dir}/
+            exit 1
+        fi
+        
+        # Run PHOLD and capture exit status - allow failure for "no hits" case
+        set +e  # Temporarily disable exit on error
+        singularity exec ${container_path} \\
+            phold run -i ${pharokka_dir}/pharokka.gbk \\
+                      -o \$phold_output \\
+                      -d ${phold_db} \\
+                      -t ${task.cpus} \\
+                      --cpu 2>&1 | tee phold_run.log
+        phold_exit=\$?
+        set -e  # Re-enable exit on error
+        
+        # Handle the exit status
+        if [ \$phold_exit -ne 0 ]; then
+            # Check if failure was due to no hits (valid biological result)
+            if grep -q "Foldseek found no hits whatsoever" phold_run.log; then
+                echo "WARNING: PHOLD found no structural hits for ${pharokka_dir}"
+                echo "This sequence may not be phage-like or lacks known structural proteins"
+                echo "Creating empty output directory as this is a valid result"
+                mkdir -p \$phold_output
+                echo "# PHOLD found no structural hits for this sequence" > \$phold_output/NO_HITS.txt
+            else
+                # Real error - fail the process
+                echo "ERROR: PHOLD failed with unexpected error for ${pharokka_dir}"
+                cat phold_run.log
+                exit 1
+            fi
+        fi
+        
+        # Verify output directory was created (either normally or as placeholder)
+        if [ ! -d "\$phold_output" ]; then
+            echo "ERROR: PHOLD output directory not found for ${pharokka_dir}"
+            echo "Current directory contents:"
+            ls -la
+            exit 1
+        fi
+        
+        echo "Successfully processed ${pharokka_dir}"
         """
     
     else if (workflow.profile.contains('conda'))
@@ -81,42 +96,57 @@ process PHOLD {
         echo "Running PHOLD via Conda environment..."
         echo "PHOLD database: ${phold_db}"
         
-        # Run phold on each pharokka output
-        for pharokka_dir in ${pharokka_dirs}; do
-            if [ -d "\$pharokka_dir" ]; then
-                # Get the original sequence name from the directory name
-                original_name=\$(echo \$pharokka_dir | sed 's/_pharokka\$//')
-                phold_output="\${original_name}_phold"
-                
-                echo "Processing \$pharokka_dir -> \$phold_output"
-                
-                # Verify Pharokka GenBank file exists
-                if [ ! -f "\${pharokka_dir}/pharokka.gbk" ]; then
-                    echo "ERROR: Pharokka GenBank file not found at \${pharokka_dir}/pharokka.gbk"
-                    echo "Pharokka directory contents:"
-                    ls -la \${pharokka_dir}/
-                    exit 1
-                fi
-                
-                phold run -i \${pharokka_dir}/pharokka.gbk \\
-                          -o \$phold_output \\
-                          -d ${phold_db} \\
-                          -t ${task.cpus} \\
-                          --cpu
-                
-                # Verify expected output files exist
-                if [ ! -d "\$phold_output" ]; then
-                    echo "ERROR: PHOLD output directory not found for \$pharokka_dir"
-                    echo "Current directory contents:"
-                    ls -la
-                    exit 1
-                fi
-                
-                echo "Successfully processed \$pharokka_dir"
-            fi
-        done
+        # Removed loop - process single pharokka output
+        # Get the original sequence name from the directory name
+        original_name=\$(echo ${pharokka_dir} | sed 's/_pharokka\$//')
+        phold_output="\${original_name}_phold"
         
-        echo "PHOLD annotation completed successfully for all sequences"
+        echo "Processing ${pharokka_dir} -> \$phold_output"
+        
+        # Verify Pharokka GenBank file exists
+        if [ ! -f "${pharokka_dir}/pharokka.gbk" ]; then
+            echo "ERROR: Pharokka GenBank file not found at ${pharokka_dir}/pharokka.gbk"
+            echo "Pharokka directory contents:"
+            ls -la ${pharokka_dir}/
+            exit 1
+        fi
+        
+        # Run PHOLD and capture exit status - allow failure for "no hits" case
+        set +e  # Temporarily disable exit on error
+        phold run -i ${pharokka_dir}/pharokka.gbk \\
+                  -o \$phold_output \\
+                  -d ${phold_db} \\
+                  -t ${task.cpus} \\
+                  --cpu 2>&1 | tee phold_run.log
+        phold_exit=\$?
+        set -e  # Re-enable exit on error
+        
+        # Handle the exit status
+        if [ \$phold_exit -ne 0 ]; then
+            # Check if failure was due to no hits (valid biological result)
+            if grep -q "Foldseek found no hits whatsoever" phold_run.log; then
+                echo "WARNING: PHOLD found no structural hits for ${pharokka_dir}"
+                echo "This sequence may not be phage-like or lacks known structural proteins"
+                echo "Creating empty output directory as this is a valid result"
+                mkdir -p \$phold_output
+                echo "# PHOLD found no structural hits for this sequence" > \$phold_output/NO_HITS.txt
+            else
+                # Real error - fail the process
+                echo "ERROR: PHOLD failed with unexpected error for ${pharokka_dir}"
+                cat phold_run.log
+                exit 1
+            fi
+        fi
+        
+        # Verify output directory was created (either normally or as placeholder)
+        if [ ! -d "\$phold_output" ]; then
+            echo "ERROR: PHOLD output directory not found for ${pharokka_dir}"
+            echo "Current directory contents:"
+            ls -la
+            exit 1
+        fi
+        
+        echo "Successfully processed ${pharokka_dir}"
         """
         
     else

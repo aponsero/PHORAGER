@@ -1,9 +1,9 @@
 process PHAROKKA {
-    tag "Pharokka annotation on multiple sequences"
-    publishDir "${params.outdir}/3.Annotation/Anno3_Pharokka", mode: 'copy'
+    tag "Pharokka annotation on ${fasta_file.simpleName}"  
+    publishDir "${params.outdir}/3.Annotation/Anno3_Pharokka", mode: 'copy', enabled: false
 
     input:
-    path "input_dir/*"
+    each path(fasta_file) 
     path pharokka_db
 
     output:
@@ -37,34 +37,28 @@ process PHAROKKA {
             echo "Pharokka container already exists, using cached version."
         fi
         
-        # Run pharokka on each fasta file
-        for fasta in input_dir/*.fasta; do
-            if [ -f "\$fasta" ]; then
-                name=\$(basename \$fasta .fasta)
-                echo "Processing \$fasta -> \${name}_pharokka"
-                
-                singularity exec --cleanenv ${container_path} \\
-                    pharokka.py -i \$fasta \\
-                                -o "\${name}_pharokka" \\
-                                -d ${pharokka_db} \\
-                                -t ${task.cpus}
-                
-                # Verify output was created
-                if [ ! -d "\${name}_pharokka" ]; then
-                    echo "ERROR: Pharokka output directory not found for \$fasta"
-                    exit 1
-                fi
-                
-                if [ ! -f "\${name}_pharokka/pharokka.gbk" ]; then
-                    echo "ERROR: Pharokka GenBank file not found for \$fasta"
-                    exit 1
-                fi
-                
-                echo "Successfully processed \$fasta"
-            fi
-        done
+        # Removed loop - process single fasta file
+        name=\$(basename ${fasta_file} .fasta)
+        echo "Processing ${fasta_file} -> \${name}_pharokka"
         
-        echo "Pharokka annotation completed successfully for all sequences"
+        singularity exec --cleanenv ${container_path} \\
+            pharokka.py -i ${fasta_file} \\
+                        -o "\${name}_pharokka" \\
+                        -d ${pharokka_db} \\
+                        -t ${task.cpus}
+        
+        # Verify output was created
+        if [ ! -d "\${name}_pharokka" ]; then
+            echo "ERROR: Pharokka output directory not found for ${fasta_file}"
+            exit 1
+        fi
+        
+        if [ ! -f "\${name}_pharokka/pharokka.gbk" ]; then
+            echo "ERROR: Pharokka GenBank file not found for ${fasta_file}"
+            exit 1
+        fi
+        
+        echo "Successfully processed ${fasta_file}"
         """
     
     else if (workflow.profile.contains('conda'))
@@ -72,33 +66,27 @@ process PHAROKKA {
         echo "Running Pharokka via Conda environment..."
         echo "Pharokka database: ${pharokka_db}"
         
-        # Run pharokka on each fasta file
-        for fasta in input_dir/*.fasta; do
-            if [ -f "\$fasta" ]; then
-                name=\$(basename \$fasta .fasta)
-                echo "Processing \$fasta -> \${name}_pharokka"
-                
-                pharokka.py -i \$fasta \\
-                            -o "\${name}_pharokka" \\
-                            -d ${pharokka_db} \\
-                            -t ${task.cpus}
-                
-                # Verify output was created
-                if [ ! -d "\${name}_pharokka" ]; then
-                    echo "ERROR: Pharokka output directory not found for \$fasta"
-                    exit 1
-                fi
-                
-                if [ ! -f "\${name}_pharokka/pharokka.gbk" ]; then
-                    echo "ERROR: Pharokka GenBank file not found for \$fasta"
-                    exit 1
-                fi
-                
-                echo "Successfully processed \$fasta"
-            fi
-        done
+        # Removed loop - process single fasta file
+        name=\$(basename ${fasta_file} .fasta)
+        echo "Processing ${fasta_file} -> \${name}_pharokka"
         
-        echo "Pharokka annotation completed successfully for all sequences"
+        pharokka.py -i ${fasta_file} \\
+                    -o "\${name}_pharokka" \\
+                    -d ${pharokka_db} \\
+                    -t ${task.cpus}
+        
+        # Verify output was created
+        if [ ! -d "\${name}_pharokka" ]; then
+            echo "ERROR: Pharokka output directory not found for ${fasta_file}"
+            exit 1
+        fi
+        
+        if [ ! -f "\${name}_pharokka/pharokka.gbk" ]; then
+            echo "ERROR: Pharokka GenBank file not found for ${fasta_file}"
+            exit 1
+        fi
+        
+        echo "Successfully processed ${fasta_file}"
         """
         
     else

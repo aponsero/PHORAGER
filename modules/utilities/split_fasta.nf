@@ -6,7 +6,8 @@ process SPLIT_FASTA {
     path fasta_file
 
     output:
-    path "putative_prophage_sequences/*.fasta", emit: split_fastas
+    path "*.fasta", emit: split_fastas
+    path "file_list.txt", emit: file_list
 
     script:
     // This process uses the parsing_env (Python + BioPython)
@@ -42,14 +43,11 @@ process SPLIT_FASTA {
 from Bio import SeqIO
 import os
 
-# Create output directory
-os.makedirs("putative_prophage_sequences", exist_ok=True)
-
-# Read and split sequences
+# Read and split sequences - write directly to current directory
 for record in SeqIO.parse("${fasta_file}", "fasta"):
     # Get sequence ID without spaces and create filename
     seq_id = record.id.split()[0]
-    output_file = f"putative_prophage_sequences/{seq_id}.fasta"
+    output_file = f"{seq_id}.fasta"
     
     # Write individual sequence to file
     with open(output_file, 'w') as out_handle:
@@ -61,15 +59,13 @@ EOF
         # Run the Python script using the container
         singularity exec ${container_path} python3 split_sequences.py
         
-        # Verify output directory was created and contains files
-        if [ ! -d "putative_prophage_sequences" ]; then
-            echo "ERROR: Output directory 'putative_prophage_sequences' not created"
-            exit 1
-        fi
+        # Create file list
+        ls *.fasta > file_list.txt
         
-        file_count=\$(ls putative_prophage_sequences/*.fasta 2>/dev/null | wc -l)
+        # Verify output files were created
+        file_count=\$(ls *.fasta 2>/dev/null | wc -l)
         if [ "\$file_count" -eq 0 ]; then
-            echo "ERROR: No FASTA files created in output directory"
+            echo "ERROR: No FASTA files created"
             echo "Input file contents:"
             head -n 5 ${fasta_file}
             exit 1
@@ -89,14 +85,11 @@ EOF
 from Bio import SeqIO
 import os
 
-# Create output directory
-os.makedirs("putative_prophage_sequences", exist_ok=True)
-
-# Read and split sequences
+# Read and split sequences - write directly to current directory
 for record in SeqIO.parse("${fasta_file}", "fasta"):
     # Get sequence ID without spaces and create filename
     seq_id = record.id.split()[0]
-    output_file = f"putative_prophage_sequences/{seq_id}.fasta"
+    output_file = f"{seq_id}.fasta"
     
     # Write individual sequence to file
     with open(output_file, 'w') as out_handle:
@@ -108,15 +101,13 @@ EOF
         # Run the Python script using conda environment
         python3 split_sequences.py
         
-        # Verify output directory was created and contains files
-        if [ ! -d "putative_prophage_sequences" ]; then
-            echo "ERROR: Output directory 'putative_prophage_sequences' not created"
-            exit 1
-        fi
+        # Create file list
+        ls *.fasta > file_list.txt
         
-        file_count=\$(ls putative_prophage_sequences/*.fasta 2>/dev/null | wc -l)
+        # Verify output files were created
+        file_count=\$(ls *.fasta 2>/dev/null | wc -l)
         if [ "\$file_count" -eq 0 ]; then
-            echo "ERROR: No FASTA files created in output directory"
+            echo "ERROR: No FASTA files created"
             echo "Input file contents:"
             head -n 5 ${fasta_file}
             exit 1
