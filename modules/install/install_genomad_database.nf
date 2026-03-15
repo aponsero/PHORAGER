@@ -39,10 +39,10 @@ process INSTALL_GENOMAD_DATABASE {
             rm -rf ${db_path}
             
             # Download database from configured URL
-            wget -O ${database_location}/genomad_db_v1.9.tar.gz "${download_url}"
+            wget -O ${database_location}/genomad_db_v1.7.tar.gz "${download_url}"
             
             # Extract the database
-            tar -xzf ${database_location}/genomad_db_v1.9.tar.gz -C ${database_location}
+            tar -xzf ${database_location}/genomad_db_v1.7.tar.gz -C ${database_location}
             
             # Move extracted contents to proper directory name
             if [ -d "${database_location}/genomad_db" ]; then
@@ -53,7 +53,7 @@ process INSTALL_GENOMAD_DATABASE {
             fi
             
             # Remove the tar file to save space
-            rm ${database_location}/genomad_db_v1.9.tar.gz
+            rm ${database_location}/genomad_db_v1.7.tar.gz
             
             # Verify the key file exists
             if [ ! -f "${db_path}/${key_file}" ]; then
@@ -92,10 +92,10 @@ process INSTALL_GENOMAD_DATABASE {
             rm -rf ${db_path}
             
             # Download database from configured URL
-            wget -O ${database_location}/genomad_db_v1.9.tar.gz "${download_url}"
+            wget -O ${database_location}/genomad_db_v1.7.tar.gz "${download_url}"
             
             # Extract the database
-            tar -xzf ${database_location}/genomad_db_v1.9.tar.gz -C ${database_location}
+            tar -xzf ${database_location}/genomad_db_v1.7.tar.gz -C ${database_location}
             
             # Move extracted contents to proper directory name
             if [ -d "${database_location}/genomad_db" ]; then
@@ -106,7 +106,7 @@ process INSTALL_GENOMAD_DATABASE {
             fi
             
             # Remove the tar file to save space
-            rm ${database_location}/genomad_db_v1.9.tar.gz
+            rm ${database_location}/genomad_db_v1.7.tar.gz
             
             # Verify the key file exists
             if [ ! -f "${db_path}/${key_file}" ]; then

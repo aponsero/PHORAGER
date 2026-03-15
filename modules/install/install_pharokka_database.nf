@@ -39,21 +39,21 @@ process INSTALL_PHAROKKA_DATABASE {
             # rm -rf ${db_path}
             
             # Download database directly from Zenodo
-            # wget --no-check-certificate -O ${database_location}/pharokka_v1.4.0_databases.tar.gz "${download_url}"
+            # wget --no-check-certificate -O ${database_location}/pharokka_v1.8.0_databases.tar.gz "${download_url}"
             
             # Extract the database
-            tar -xzf ${database_location}/pharokka_v1.4.0_databases.tar.gz -C ${database_location}
+            tar -xzf ${database_location}/pharokka_v1.8.0_databases.tar.gz -C ${database_location}
             
             # Move extracted contents to proper directory name
-            if [ -d "${database_location}/pharokka_v1.4.0_databases" ]; then
-                mv "${database_location}/pharokka_v1.4.0_databases" "${db_path}"
+            if [ -d "${database_location}/pharokka_v1.8.0_databases" ]; then
+                mv "${database_location}/pharokka_v1.8.0_databases" "${db_path}"
             else
-                echo "ERROR: Expected pharokka_v1.4.0_databases directory not found after extraction"
+                echo "ERROR: Expected pharokka_v1.8.0_databases directory not found after extraction"
                 exit 1
             fi
             
             # Remove the tar file to save space
-            rm ${database_location}/pharokka_v1.4.0_databases.tar.gz
+            rm ${database_location}/pharokka_v1.8.0_databases.tar.gz
             
             # Verify the key file exists
             if [ ! -f "${db_path}/${key_file}" ]; then
@@ -93,21 +93,21 @@ process INSTALL_PHAROKKA_DATABASE {
             rm -rf ${db_path}
             
             # Download database directly from Zenodo
-            wget --no-check-certificate -O ${database_location}/pharokka_v1.4.0_databases.tar.gz "${download_url}"
+            wget --no-check-certificate -O ${database_location}/pharokka_v1.8.0_databases.tar.gz "${download_url}"
             
             # Extract the database
-            tar -xzf ${database_location}/pharokka_v1.4.0_databases.tar.gz -C ${database_location}
+            tar -xzf ${database_location}/pharokka_v1.8.0_databases.tar.gz -C ${database_location}
             
             # Move extracted contents to proper directory name
-            if [ -d "${database_location}/pharokka_v1.4.0_databases" ]; then
-                mv "${database_location}/pharokka_v1.4.0_databases" "${db_path}"
+            if [ -d "${database_location}/pharokka_v1.8.0_databases" ]; then
+                mv "${database_location}/pharokka_v1.8.0_databases" "${db_path}"
             else
-                echo "ERROR: Expected pharokka_v1.4.0_databases directory not found after extraction"
+                echo "ERROR: Expected pharokka_v1.8.0_databases directory not found after extraction"
                 exit 1
             fi
             
             # Remove the tar file to save space
-            rm ${database_location}/pharokka_v1.4.0_databases.tar.gz
+            rm ${database_location}/pharokka_v1.8.0_databases.tar.gz
             
             # Verify the key file exists
             if [ ! -f "${db_path}/${key_file}" ]; then

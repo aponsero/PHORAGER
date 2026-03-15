@@ -60,11 +60,11 @@ tools:
     description: "Phage genome annotation"
     group: ["annotation"]
     database_required: true
-    conda_package: "bioconda::pharokka=1.7.4"
-    singularity_container: "quay.io/biocontainers/pharokka:1.7.4--pyhdfd78af_0"
+    conda_package: "bioconda::pharokka=1.9.1"
+    singularity_container: "quay.io/biocontainers/pharokka:1.9.1--pyhdfd78af_0"
     verification_command: "pharokka.py --version"
-    verification_pattern: "1.7.4"
-    version: "1.7.4"
+    verification_pattern: "1.9.1"
+    version: "1.9.1"
   phold:
     description: "Phage protein function prediction"
     group: ["annotation"]
@@ -97,7 +97,4 @@ databases:
       singularity: "VIBRANT_setup.py with hmmpress fix"
     key_file: "VOGDB94_phage.HMM"
     expected_size_gb: 11.0
-  # Annotation tool databases will be added when focusing on database installation
-  # checkv:
-  # pharokka:
-  # pho
+
