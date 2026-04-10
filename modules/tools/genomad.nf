@@ -35,7 +35,7 @@ process GENOMAD {
         GENOMAD_DB_ABS=\$(realpath ${genomad_db})
 
         # Run GenoMAD with bind mounting
-        singularity exec --bind \$(pwd):\$(pwd) --bind \${GENOMAD_DB_ABS}:\${GENOMAD_DB_ABS} ${container_path} \\
+        singularity exec --no-home --bind \$(pwd):\$(pwd) --bind \${GENOMAD_DB_ABS}:\${GENOMAD_DB_ABS} ${container_path} \\
             genomad end-to-end ${preset_flag} --cleanup --threads ${task.cpus} \\
             ${genome} genomad_output \${GENOMAD_DB_ABS}
         """

@@ -34,7 +34,7 @@ process VIBRANT {
         VIBRANT_DB_ABS=\$(realpath ${vibrant_db})
 
         # Run VIBRANT with bind mounting
-        singularity exec --bind \$(pwd):\$(pwd) --bind \${VIBRANT_DB_ABS}:\${VIBRANT_DB_ABS} ${container_path} \\
+        singularity exec --no-home --bind \$(pwd):\$(pwd) --bind \${VIBRANT_DB_ABS}:\${VIBRANT_DB_ABS} ${container_path} \\
             VIBRANT_run.py -i ${genome} -d \${VIBRANT_DB_ABS}/databases/ -m \${VIBRANT_DB_ABS}/files/ \\
             -no_plot -l ${params.vibrant_min_length} -t ${task.cpus}
         """

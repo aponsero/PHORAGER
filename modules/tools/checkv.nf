@@ -41,7 +41,7 @@ process CHECKV {
         fi
         
         # Run CheckV with explicit database path (no bind mounting for HPC compatibility)
-        singularity exec ${container_path} \\
+        singularity exec --no-home ${container_path} \\
                          checkv end_to_end ${fasta} checkv_output -d ${checkv_db} -t ${task.cpus}
         
         # Verify expected output files exist

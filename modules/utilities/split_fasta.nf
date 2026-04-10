@@ -57,7 +57,7 @@ print(f"Successfully split sequences from ${fasta_file}")
 EOF
         
         # Run the Python script using the container
-        singularity exec ${container_path} python3 split_sequences.py
+        singularity exec --no-home ${container_path} python3 split_sequences.py
         
         # Create file list
         ls *.fasta > file_list.txt

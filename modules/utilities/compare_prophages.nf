@@ -182,7 +182,7 @@ except Exception as e:
 EOF
 
         # Execute script with singularity
-        singularity exec --bind \$(pwd):\$(pwd) ${container_path} python3 compare_prophages.py
+        singularity exec --no-home --bind \$(pwd):\$(pwd) ${container_path} python3 compare_prophages.py
         """
     else if (workflow.profile.contains('conda'))
         """

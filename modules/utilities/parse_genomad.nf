@@ -57,7 +57,7 @@ with open(output_file, 'w') as f_out:
 EOF
 
         # Execute script with singularity
-        singularity exec --bind \$(pwd):\$(pwd) ${container_path} python3 parse_genomad.py
+        singularity exec --no-home --bind \$(pwd):\$(pwd) ${container_path} python3 parse_genomad.py
         """
     else if (workflow.profile.contains('conda'))
         """

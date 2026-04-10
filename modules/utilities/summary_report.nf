@@ -131,7 +131,7 @@ with open('Bacterial_genome_QC.log', 'w') as f:
 EOF
 
         # Run Python script using singularity
-        singularity exec ${container_path} python3 summary_script.py
+        singularity exec --no-home ${container_path} python3 summary_script.py
         """
     
     else if (workflow.profile.contains('conda'))

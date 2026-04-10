@@ -62,7 +62,7 @@ print(failed['Name'].tolist())
 EOF
 
         # Run Python script using singularity
-        singularity exec ${container_path} python3 filter_script.py
+        singularity exec --no-home ${container_path} python3 filter_script.py
         """
     
     else if (workflow.profile.contains('conda'))

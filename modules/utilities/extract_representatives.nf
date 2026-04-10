@@ -66,20 +66,20 @@ process EXTRACT_REPRESENTATIVES {
         
         # Extract representative sequences using seqfu
         echo "Extracting representative sequences using seqfu..."
-        singularity exec ${container_path} \\
+        singularity exec --no-home ${container_path} \\
             seqfu list cluster_representatives.tsv ${input_fasta} > cluster_representative_sequences.fasta
-        
+
         # Verify output FASTA file was created and is not empty
         if [ ! -s "cluster_representative_sequences.fasta" ]; then
             echo "ERROR: Representative sequences FASTA file is empty or not created"
             echo "Representative IDs:"
             head cluster_representatives.tsv
             echo "Input FASTA headers (first 5):"
-            singularity exec ${container_path} grep "^>" ${input_fasta} | head -n 5
+            singularity exec --no-home ${container_path} grep "^>" ${input_fasta} | head -n 5
             exit 1
         fi
-        
-        seq_count=\$(singularity exec ${container_path} grep -c "^>" cluster_representative_sequences.fasta)
+
+        seq_count=\$(singularity exec --no-home ${container_path} grep -c "^>" cluster_representative_sequences.fasta)
         echo "Successfully extracted \$seq_count representative sequences"
         
         if [ "\$seq_count" -ne "\$rep_count" ]; then

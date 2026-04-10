@@ -64,17 +64,22 @@ process CLUSTER_PHAGES {
         
         # Create directory for blast database
         mkdir -p blast_db
+
+        # Dereference symlinked scripts into the work directory so they are
+        # accessible inside the container without mounting /hpc-home
+        cp --dereference ${anicalc_script} anicalc_local.py
+        cp --dereference ${aniclust_script} aniclust_local.py
         
         # 1. Make BLAST database
         echo "Creating BLAST database..."
-        singularity exec ${container_path} \\
+        singularity exec --no-home ${container_path} \\
             makeblastdb -in ${input_fasta} \\
                         -dbtype nucl \\
                         -out blast_db/filtered_phage_db
         
         # 2. Run all-vs-all BLAST
         echo "Running all-vs-all BLAST..."
-        singularity exec ${container_path} \\
+        singularity exec --no-home ${container_path} \\
             blastn -query ${input_fasta} \\
                    -db blast_db/filtered_phage_db \\
                    -outfmt '6 std qlen slen' \\
@@ -84,15 +89,15 @@ process CLUSTER_PHAGES {
         
         # 3. Calculate pairwise ANI
         echo "Calculating pairwise ANI..."
-        singularity exec ${container_path} \\
-            python ${anicalc_script} \\
+        singularity exec --no-home ${container_path} \\
+            python anicalc_local.py \\
                    -i phage_blast.tsv \\
                    -o phage_ani.tsv
         
         # 4. Perform clustering
         echo "Performing clustering..."
-        singularity exec ${container_path} \\
-            python ${aniclust_script} \\
+        singularity exec --no-home ${container_path} \\
+            python aniclust_local.py \\
                    --fna ${input_fasta} \\
                    --ani phage_ani.tsv \\
                    --out phage_clusters.tsv \\

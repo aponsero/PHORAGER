@@ -257,7 +257,7 @@ print("Annotation summary generation completed")
 EOF
         
         # Run the Python script using the container
-        singularity exec ${container_path} python3 annotation_summary.py
+        singularity exec --no-home ${container_path} python3 annotation_summary.py
         
         # Verify output files were created
         if [ ! -f "Annotation_summary.log" ]; then

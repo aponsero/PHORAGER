@@ -58,7 +58,7 @@ process CHECKM2 {
         done
 
         # Run CheckM2 using manual singularity execution (no bind mounting for HPC compatibility)
-        singularity exec ${container_path} \\
+        singularity exec --no-home ${container_path} \\
             checkm2 predict --threads ${threads} --input input_genomes --output-directory checkm2_output --force
 
         # Move the quality report to the current directory

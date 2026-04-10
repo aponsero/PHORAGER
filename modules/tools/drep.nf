@@ -49,11 +49,11 @@ process DREP {
         # For small datasets (< 10 genomes), skip greedy clustering to avoid centrality calculation errors
         if [ ${genome_count} -lt 10 ]; then
             echo "Small dataset detected (${genome_count} genomes). Running dRep without greedy clustering."
-            singularity exec ${container_path} \\
+            singularity exec --no-home ${container_path} \\
                 dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads} --S_algorithm fastANI -pa 0.95
         else
             echo "Large dataset detected (${genome_count} genomes). Running dRep with greedy clustering."
-            singularity exec ${container_path} \\
+            singularity exec --no-home ${container_path} \\
                 dRep dereplicate drep_output -g filtered_genomes/* -sa ${ani_threshold} --ignoreGenomeQuality --processors ${threads} --S_algorithm fastANI -pa 0.95 --greedy_secondary_clustering
         fi
         """

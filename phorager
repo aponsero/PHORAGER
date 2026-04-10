@@ -18,6 +18,7 @@ from commands.install import InstallCommand
 from commands.bacterial import BacterialCommand
 from commands.prophage import ProphageCommand
 from commands.annotation import AnnotationCommand
+from commands.summarize import SummarizeCommand
 
 
 def create_parser():
@@ -42,6 +43,15 @@ Examples:
   
   # Run annotation workflow
   phorager annotation --prophage results/2.Prophage_detection/ --outdir results/
+
+  # List available summary types
+  phorager summarize --list
+
+  # Generate bacterial genome summary table
+  phorager summarize --type bacterial_genome --outdir results/ --output bacterial_summary.tsv
+
+  # Generate prophage summary table
+  phorager summarize --type prophage_table --outdir results/ --output prophage_summary.tsv
         """
     )
     
@@ -90,6 +100,28 @@ Examples:
         description='Prophage quality assessment, functional annotation, and clustering'
     )
     AnnotationCommand.add_arguments(annotation_parser)
+
+    # Summarize subcommand
+    summarize_parser = subparsers.add_parser(
+        'summarize',
+        help='Generate summary tables from pipeline outputs',
+        description=(
+            'Generate structured TSV/CSV summary tables from completed '
+            'Phorager workflow outputs. Run with --list to see available table types.'
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  phorager summarize --list
+  phorager summarize --type bacterial_genome --outdir results/ --output bacterial_summary.tsv
+  phorager summarize --type prophage_table   --outdir results/ --output prophage_summary.tsv
+  phorager summarize --type bacterial_genome \\
+      --bacterial-outdir  /data/bacterial_run \\
+      --annotation-outdir /data/annotation_run \\
+      --output bacterial_summary.tsv
+        """
+    )
+    SummarizeCommand.add_arguments(summarize_parser)
     
     return parser
 
@@ -128,6 +160,12 @@ def main():
     elif args.command == 'annotation':
         annotation_cmd = AnnotationCommand()
         success = annotation_cmd.run(args)
+        if success is not True:
+            sys.exit(1)
+
+    elif args.command == 'summarize':
+        summarize_cmd = SummarizeCommand()
+        success = summarize_cmd.run(args)
         if success is not True:
             sys.exit(1)
     

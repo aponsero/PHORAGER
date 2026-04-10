@@ -35,7 +35,7 @@ process INSTALL_PARSING_ENV {
         
         # Manual singularity execution
         export MPLCONFIGDIR=/tmp/matplotlib_config
-        singularity exec ${container_path} ${verification_cmd} > parsing_env_test.txt 2>&1
+        singularity exec --no-home ${container_path} ${verification_cmd} > parsing_env_test.txt 2>&1
         
         # Check if command was found (exit status should be 0 or 1, not 127)
         if [ \$? -ne 127 ]; then

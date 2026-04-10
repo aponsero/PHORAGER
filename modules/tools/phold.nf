@@ -54,7 +54,7 @@ process PHOLD {
         
         # Run PHOLD and capture exit status - allow failure for "no hits" case
         set +e  # Temporarily disable exit on error
-        singularity exec ${container_path} \\
+        singularity exec --no-home ${container_path} \\
             phold run -i ${pharokka_dir}/pharokka.gbk \\
                       -o \$phold_output \\
                       -d ${phold_db} \\

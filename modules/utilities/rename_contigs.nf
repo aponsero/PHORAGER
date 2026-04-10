@@ -122,7 +122,7 @@ rename_contigs(genome_files)
 EOFPYTHON
         
         # Run the Python script using the container
-        singularity exec ${container_path} python3 rename_contigs.py ${genome_files}
+        singularity exec --no-home ${container_path} python3 rename_contigs.py ${genome_files}
         
         # Verify output directory was created and contains files
         if [ ! -d "renamed_genomes" ]; then

@@ -274,7 +274,7 @@ print("Annotation parsing and filtering completed")
 EOF
         
         # Run the Python script using the container
-        singularity exec ${container_path} python3 parse_filter_annotations.py
+        singularity exec --no-home ${container_path} python3 parse_filter_annotations.py
         
         # Verify output files were created
         if [ ! -f "filtered_annotation_output.tsv" ]; then
