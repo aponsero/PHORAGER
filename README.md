@@ -32,6 +32,7 @@ Phorager provides an integrated workflow for:
 - **Bacterial genome quality control** - CheckM2 assessment, filtering, and dRep dereplication
 - **Prophage detection** - GenoMAD and VIBRANT-based identification of integrated prophages
 - **Phage annotation** - CheckV quality assessment, Pharokka annotation, and Phold function prediction
+- **Summary tables** - Structured TSV summaries of QC metrics and prophage characteristics across your dataset
 
 > **Note**: Phorager is currently in beta release. We welcome feedback, bug reports, and feature requests through our [issue tracker](../../issues).
 
@@ -60,11 +61,27 @@ Execute workflows on your data:
 
 ```bash
 # Bacterial genome quality control
-phorager bacterial --genome /path/to/genomes
+phorager bacterial --genome /path/to/genomes --outdir results/
 
 # Prophage detection
-phorager prophage --genome /path/to/genomes
+phorager prophage --genome /path/to/genomes --outdir results/
+
+# Prophage annotation and clustering
+phorager annotation --prophage results/ --outdir results/
 ```
+
+### 4. Generate Summaries
+Create structured summary tables from your completed results:
+
+```bash
+# Bacterial genome QC metrics with prophage counts
+phorager summarize --type bacterial_genome --outdir results/
+
+# Per-prophage table with host, cluster, quality, and annotation
+phorager summarize --type prophage_table --outdir results/
+```
+
+Output is written to `results/4.Summaries/`. Use `phorager summarize --list` to see all available summary types.
 
 ## Prerequisites
 
@@ -80,6 +97,7 @@ phorager prophage --genome /path/to/genomes
 - [Bacterial Workflow](../../wiki/Bacterial-Workflow) - Genome quality control and dereplication
 - [Prophage Workflow](../../wiki/Prophage-Workflow) - Integrated prophage detection
 - [Annotation Workflow](../../wiki/Annotation-Workflow) - Prophage annotation and clustering
+- [Summary Workflow](../../wiki/Summary-Workflow) - Generating summary tables from pipeline outputs
 
 ## Getting Help
 
@@ -87,6 +105,7 @@ phorager prophage --genome /path/to/genomes
 - View available tools and databases: `phorager install --list-available`
 - Preview commands before running: `phorager [command] --dry-run`
 - See current configuration: `phorager config show`
+- List available summary types: `phorager summarize --list`
 
 ## Reporting Issues and Feedback
 
