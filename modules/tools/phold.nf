@@ -1,6 +1,8 @@
 process PHOLD {
     tag "PHOLD annotation on ${pharokka_dir.simpleName}"
-    publishDir "${params.outdir}/3.Annotation/Anno4_PHOLD", mode: 'copy', enabled: false
+    publishDir "${params.outdir}/3.Annotation/Anno4_PHOLD", mode: 'copy',
+        pattern: "*_phold_pub",
+        saveAs: { filename -> filename.replace('_phold_pub', '_phold') }
 
     input:
     each path(pharokka_dir) 
@@ -8,6 +10,7 @@ process PHOLD {
 
     output:
     path "*_phold", emit: results
+    path "*_phold_pub", emit: publish_files, optional: true
 
     script:
     // Get tool specifications from config
@@ -88,6 +91,12 @@ process PHOLD {
             exit 1
         fi
         
+        # Stage key files for publishing (skipped gracefully for NO_HITS case)
+        mkdir -p "\${phold_output}_pub"
+        for f in phold_all_cds_functions.tsv phold_per_cds_predictions.tsv phold_output.gbk; do
+            [ -f "\${phold_output}/\${f}" ] && cp "\${phold_output}/\${f}" "\${phold_output}_pub/"
+        done
+        
         echo "Successfully processed ${pharokka_dir}"
         """
     
@@ -145,6 +154,12 @@ process PHOLD {
             ls -la
             exit 1
         fi
+        
+        # Stage key files for publishing (skipped gracefully for NO_HITS case)
+        mkdir -p "\${phold_output}_pub"
+        for f in phold_all_cds_functions.tsv phold_per_cds_predictions.tsv phold_output.gbk; do
+            [ -f "\${phold_output}/\${f}" ] && cp "\${phold_output}/\${f}" "\${phold_output}_pub/"
+        done
         
         echo "Successfully processed ${pharokka_dir}"
         """

@@ -17,7 +17,12 @@ Output columns:
   Cluster_representative - representative sequence for this prophage's cluster
                            (from Cluster_information.tsv col 0)
   CheckV_quality         - quality tier from CheckV quality_summary.tsv
-  Phage_length           - proviral_length when available, else contig_length
+  Phage_length           - for non-fragment sequences: proviral_length from
+                           CheckV when available, else contig_length; for
+                           CheckV fragments (_1 / _2): actual sequence length
+                           from filtered_phage_set.fasta, since the parent's
+                           proviral_length covers the full trimmed region and
+                           does not accurately represent either fragment
   CDS_number             - CDS count from filtered_annotation_output.tsv;
                            NA if annotation was skipped
 """
@@ -82,23 +87,24 @@ class ProphageTableSummary(BaseSummary):
         rows = []
         for record in SeqIO.parse(str(fasta_path), "fasta"):
             prophage_name = record.id
+            fasta_length  = len(record.seq)
 
             host = self._extract_host(prophage_name)
             rep  = cluster_map.get(prophage_name, "Not_in_clusters")
 
             checkv_quality, phage_length = self._get_checkv_data(
-                prophage_name, checkv_index
+                prophage_name, checkv_index, fasta_length
             )
 
             cds_number = cds_map.get(prophage_name, "NA")
 
             rows.append({
-                "Prophage_name":        prophage_name,
-                "Bacterial_host":       host,
+                "Prophage_name":          prophage_name,
+                "Bacterial_host":         host,
                 "Cluster_representative": rep,
-                "CheckV_quality":       checkv_quality,
-                "Phage_length":         phage_length,
-                "CDS_number":           cds_number,
+                "CheckV_quality":         checkv_quality,
+                "Phage_length":           phage_length,
+                "CDS_number":             cds_number,
             })
 
         return pd.DataFrame(rows)
@@ -188,26 +194,40 @@ class ProphageTableSummary(BaseSummary):
         return df.set_index("contig_id")
 
     @staticmethod
-    def _get_checkv_data(prophage_name: str, checkv_index: pd.DataFrame) -> tuple:
+    def _get_checkv_data(
+        prophage_name: str,
+        checkv_index: pd.DataFrame,
+        fasta_length: int,
+    ) -> tuple:
         """
         Return (checkv_quality, phage_length) for a prophage, or ('NA', 'NA').
 
-        CheckV appends '_1' to proviral sequences in proviruses.fna (its trimmed
-        output). PARSE_CHECKV extracts from that file, so filtered_prophages.fasta
-        carries the '_1' name. But quality_summary.tsv records the original input
-        name without '_1'. Try the exact name first, then strip a trailing '_1'
-        and retry before giving up.
+        CheckV appends '_1' to proviral sequences in proviruses.fna when it
+        trims a single region, and produces '_1' + '_2' fragments when it
+        detects two viral sub-regions separated by bacterial genes in a longer
+        provirus. quality_summary.tsv always records the original input name
+        (no suffix), with a single proviral_length for the whole region.
+
+        For exact matches (complete genomes from viruses.fna): return quality
+        and length directly from the CheckV index.
+
+        For fragments (_1 or _2): return quality inherited from the parent
+        entry, and use fasta_length (the actual sequence length from
+        filtered_phage_set.fasta) as the length. The parent's proviral_length
+        covers the full trimmed region and does not accurately represent either
+        individual fragment.
         """
         if prophage_name in checkv_index.index:
             row = checkv_index.loc[prophage_name]
             return str(row["checkv_quality"]), row["phage_length"]
 
-        # Provirus case: strip CheckV's trailing '_1' and retry
-        if prophage_name.endswith("_1"):
+        # Fragment case: strip CheckV's trailing '_1' or '_2' and retry.
+        # Return quality from the parent and the actual FASTA sequence length.
+        if prophage_name.endswith("_1") or prophage_name.endswith("_2"):
             base_name = prophage_name[:-2]
             if base_name in checkv_index.index:
                 row = checkv_index.loc[base_name]
-                return str(row["checkv_quality"]), row["phage_length"]
+                return str(row["checkv_quality"]), fasta_length
 
         print(f"  Warning: '{prophage_name}' not found in CheckV quality summary.")
         return "NA", "NA"

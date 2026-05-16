@@ -1,6 +1,8 @@
 process PHAROKKA {
     tag "Pharokka annotation on ${fasta_file.simpleName}"  
-    publishDir "${params.outdir}/3.Annotation/Anno3_Pharokka", mode: 'copy', enabled: false
+    publishDir "${params.outdir}/3.Annotation/Anno3_Pharokka", mode: 'copy',
+        pattern: "*_pharokka_pub",
+        saveAs: { filename -> filename.replace('_pharokka_pub', '_pharokka') }
 
     input:
     each path(fasta_file) 
@@ -8,6 +10,7 @@ process PHAROKKA {
 
     output:
     path "*_pharokka", emit: results
+    path "*_pharokka_pub", emit: publish_files, optional: true
 
     script:
     // Get tool specifications from config
@@ -58,6 +61,13 @@ process PHAROKKA {
             exit 1
         fi
         
+        # Stage key files for publishing
+        mkdir -p "\${name}_pharokka_pub"
+        for f in pharokka.gbk pharokka.gff pharokka_cds_functions.tsv \\
+                  pharokka_length_gc_cds_density.tsv pharokka_top_hits_mash_inphared.tsv; do
+            [ -f "\${name}_pharokka/\${f}" ] && cp "\${name}_pharokka/\${f}" "\${name}_pharokka_pub/"
+        done
+        
         echo "Successfully processed ${fasta_file}"
         """
     
@@ -85,6 +95,13 @@ process PHAROKKA {
             echo "ERROR: Pharokka GenBank file not found for ${fasta_file}"
             exit 1
         fi
+        
+        # Stage key files for publishing
+        mkdir -p "\${name}_pharokka_pub"
+        for f in pharokka.gbk pharokka.gff pharokka_cds_functions.tsv \\
+                  pharokka_length_gc_cds_density.tsv pharokka_top_hits_mash_inphared.tsv; do
+            [ -f "\${name}_pharokka/\${f}" ] && cp "\${name}_pharokka/\${f}" "\${name}_pharokka_pub/"
+        done
         
         echo "Successfully processed ${fasta_file}"
         """

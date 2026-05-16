@@ -5,6 +5,34 @@ All notable changes to PHORAGER will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.5.0-beta] - 2026-05-16
+
+### Fixed
+
+- **CheckV two-fragment split: `_2` fragments missing quality data in prophage table**
+  - When CheckV detects two distinct viral sub-regions separated by bacterial genes within a single provirus, it produces two fragments in `proviruses.fna` with `_1` and `_2` suffixes. Both fragments are correctly extracted and annotated by the pipeline, but `_get_checkv_data` in `prophage_table.py` only handled the `_1` case when looking up quality data in `quality_summary.tsv` (which records the original input name without any suffix). All `_2` fragments therefore reported `NA` for `CheckV_quality` in the prophage table
+  - Fixed by extending the suffix-stripping logic in `_get_checkv_data` to cover both `_1` and `_2` before retrying the lookup
+
+- **CheckV fragment length reporting in prophage table**
+  - The `Phage_length` column for `_1` fragments previously inherited `proviral_length` from the parent entry in `quality_summary.tsv`. This value represents the full trimmed proviral region, not the individual fragment, making it inaccurate for both `_1` and `_2`
+  - Fixed by computing `Phage_length` from the actual sequence length (`len(record.seq)`) read directly from `filtered_phage_set.fasta` for all CheckV fragments (`_1` and `_2`). Non-fragment sequences continue to use `proviral_length` from the CheckV index as before.
+
+- **Selective publishing of key Pharokka and PHOLD annotation outputs** — the annotation workflow now copies a curated subset of files per sample to the output directory by default, replacing the previous behaviour of publishing nothing (`enabled: false`)
+  - Pharokka outputs published to `3.Annotation/Anno3_Pharokka/<sample>_pharokka/`:
+    - `pharokka.gbk`, `pharokka.gff`, `pharokka_cds_functions.tsv`, `pharokka_length_gc_cds_density.tsv`, `pharokka_top_hits_mash_inphared.tsv`
+  - PHOLD outputs published to `3.Annotation/Anno4_PHOLD/<sample>_phold/`:
+    - `phold_all_cds_functions.tsv`, `phold_per_cds_predictions.tsv`, `phold_output.gbk`
+  - Full tool output directories are intentionally excluded to avoid the large file volumes and write conflicts seen on HPC shared filesystems with previous full-directory publishing
+  - NO_HITS samples (PHOLD sequences with no Foldseek structural hits) are handled gracefully — no publish directory is created and the pipeline continues normally
+
+### Technical Details
+
+- **Why both fragments reach annotation**: `extract_sequences` in `parse_checkv.nf` uses substring matching (`f_id in record.id`) against the parent ID from `quality_summary.tsv`. This correctly matches both `_1` and `_2` entries in `proviruses.fna`, so both fragments have always been extracted, split, and passed to Pharokka and PHOLD. The bug was purely in the summary table lookup, not in the annotation path
+- **Fragment length source**: `filtered_phage_set.fasta` is already iterated record-by-record in `generate()`, making `len(record.seq)` available at zero additional I/O cost — no new file dependencies are introduced
+- **Implementation**: Nextflow's `publishDir` with `pattern` and `saveAs` cannot filter inside process output directories — only top-level path names are matched. The fix stages selected files into a temporary `*_pharokka_pub` / `*_phold_pub` sibling directory inside the process script, declares it as an optional secondary output, and uses `saveAs` to strip the `_pub` suffix on publish. The internal `*_pharokka` / `*_phold` directories used by downstream processes are unaffected.
+- **Recovery from previous runs**: users whose `.nextflow/` cache directory is intact can recover published outputs from a prior run without recomputation using `-resume`. If the cache has been deleted, the `recover_annotations.sh` utility script can reconstruct the same output structure by scanning the `tmp/` work directory directly.
+
+
 ## [v0.4.0-beta] - 2026-04-10
 
 ### Added
