@@ -18,7 +18,7 @@ process INSTALL_PARSING_ENV {
     def version_pattern = tool_spec.version_pattern
     
     // Detect backend by profile name since we're doing manual container management
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Installing Parsing Environment via Singularity container..."
         

@@ -21,7 +21,7 @@ process GENOMAD {
         preset_flag = "--relaxed"
     }
 
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         # Create singularity cache directory
         mkdir -p ${params.singularity_cache_dir}

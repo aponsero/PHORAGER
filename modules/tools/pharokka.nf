@@ -24,7 +24,7 @@ process PHAROKKA {
     }
     
     // Detect backend by profile name
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Running Pharokka via Singularity container..."
         echo "Pharokka database: ${pharokka_db}"

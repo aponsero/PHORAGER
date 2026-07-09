@@ -30,7 +30,7 @@ process PARSE_FILTER_ANNOTATIONS {
     }
     
     // Detect backend by profile name
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Running Parse Filter Annotations via Singularity container..."
         echo "Filter mode: ${filter_mode}"

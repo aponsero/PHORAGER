@@ -26,7 +26,7 @@ process INSTALL_VIBRANT {
     }
     
     // Detect backend by profile name since we're doing manual container management
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Installing VIBRANT via Singularity container..."
         

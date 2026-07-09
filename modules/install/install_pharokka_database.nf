@@ -25,7 +25,7 @@ process INSTALL_PHAROKKA_DATABASE {
         error "Missing key_file in database_specs for pharokka"
     }
 
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Installing Pharokka database via Singularity..."
         

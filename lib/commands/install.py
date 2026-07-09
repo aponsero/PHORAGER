@@ -8,6 +8,7 @@ Supports all bacterial genome, prophage detection, and annotation tools.
 import argparse
 import json
 import sys
+import os
 import subprocess
 from pathlib import Path
 from typing import List, Optional
@@ -153,7 +154,10 @@ class InstallCommand:
         # Add profile based on backend
         if config['backend'] == 'conda':
             cmd.extend(['-profile', 'conda'])
-        # singularity is the default profile, no need to specify
+        elif config['backend'] == 'singularity':
+            cmd.extend(['-profile', 'singularity'])
+        else:
+            raise ValueError(f"Unrecognized backend: {config['backend']!r}. Must be 'conda' or 'singularity'.")
         
         # Add workflow
         cmd.extend(['--workflow', 'install'])

@@ -21,7 +21,7 @@ process SPLIT_FASTA {
     }
     
     // Detect backend by profile name
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Running Split FASTA via Singularity container..."
         echo "Input fasta: ${fasta_file}"

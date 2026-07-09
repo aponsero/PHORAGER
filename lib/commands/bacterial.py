@@ -235,7 +235,10 @@ class BacterialCommand:
         # Add profile based on backend
         if params['backend'] == 'conda':
             cmd.extend(['-profile', 'conda'])
-        # singularity is the default profile, no need to specify
+        elif params['backend'] == 'singularity':
+            cmd.extend(['-profile', 'singularity'])
+        else:
+            raise ValueError(f"Unrecognized backend: {params['backend']!r}. Must be 'conda' or 'singularity'.")
         
         # Add workflow
         cmd.extend(['--workflow', 'bacterial'])

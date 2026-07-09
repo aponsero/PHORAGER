@@ -17,7 +17,7 @@ process FILTER_GENOMES {
     def container_url = tool_spec.singularity_url
     
     // Detect backend by profile name
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Running genome filtering via Singularity container..."
         

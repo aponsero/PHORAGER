@@ -197,6 +197,10 @@ class SummarizeCommand:
 
         if params["backend"] == "conda":
             cmd.extend(["-profile", "conda"])
+        elif params["backend"] == "singularity":
+            cmd.extend(["-profile", "singularity"])
+        else:
+            raise ValueError(f"Unrecognized backend: {params['backend']!r}. Must be 'conda' or 'singularity'.")
 
         cmd.extend(["--workflow",          "summarize"])
         cmd.extend(["--summary_type",      params["summary_type"]])

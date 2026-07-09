@@ -5,6 +5,22 @@ All notable changes to PHORAGER will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- **Singularity-backend installs attempting to build Conda environments and failing with `conda: command not found`**
+  - Reported symptom: with `"backend": "singularity"` configured, `phorager install` printed `Profile: standard` (correct) but then tried to create a Conda environment before running any tool logic, and failed on systems without Conda on `PATH`
+  - Root cause: Conda was enabled globally by default, and the only thing turning it off for Singularity was Nextflow implicitly falling back to the `standard` profile. Anything that perturbed profile resolution (a site-wide `$NXF_HOME/config`, an `NXF_CONDA_ENABLED` environment variable, an extra `-c` config file) silently re-enabled Conda for Singularity users
+  - Fixed by making Conda opt-in only, passing the backend's profile explicitly from the CLI instead of relying on an implicit default, and making the per-process profile check tolerant of multi-profile invocations
+
+### Technical Details
+
+- **Conda default inversion**: `configs/base.config`'s `conda { }` scope now sets `enabled = false` (previously `true`). Conda is enabled only via the explicit `conda.enabled = true` override inside the `conda` profile block in `configs/profiles.config`, which was already present and is unchanged. The unconditional `conda` process directives in `configs/conda_tools.config` are left in place — they are inert when `conda.enabled` is false and remain required by the `conda` profile
+- **Explicit profile flag**: `install.py`, `bacterial.py`, `prophage.py`, `annotation.py`, and `summarize.py` previously passed `-profile conda` only for the Conda backend and relied on Nextflow's implicit `standard` profile for Singularity. Each now passes `-profile conda` or `-profile singularity` explicitly based on `config['backend']`, and raises a `ValueError` on an unrecognized backend value instead of silently omitting the flag
+- **Profile composability**: all 34 process `.nf` files under `modules/` gated their Singularity script branch on `workflow.profile == 'standard' || workflow.profile.contains('singularity')`. The exact-equality check against `'standard'` failed for any multi-profile invocation (e.g. `-profile standard,benchmark`), silently falling through to the Conda branch. Changed to `workflow.profile.contains('singularity') || workflow.profile.contains('standard')`; the `else if` Conda branch and final `else` error branch are unchanged
+- **Manifest block**: `nextflow.config` now declares `manifest { name, version, nextflowVersion }` with `nextflowVersion = '>=23.04.0'`, so incompatible Nextflow installations fail fast with a clear version error instead of hitting a config-resolution edge case downstream
+
 ## [v0.5.0-beta] - 2026-05-16
 
 ### Fixed

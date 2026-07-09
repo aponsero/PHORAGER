@@ -25,7 +25,7 @@ process INSTALL_CHECKM2_DATABASE {
         error "Missing key_file in database_specs for checkm2"
     }
 
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Installing CheckM2 database via Singularity..."
         

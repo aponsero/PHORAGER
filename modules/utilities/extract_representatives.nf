@@ -21,7 +21,7 @@ process EXTRACT_REPRESENTATIVES {
     }
     
     // Detect backend by profile name
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Running Extract Representatives via Singularity container..."
         echo "Clusters file: ${clusters}"

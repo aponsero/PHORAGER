@@ -39,7 +39,7 @@ process ANNOTATION_SUMMARY {
     def qualities = checkv_quality_levels.split(',').collect { "\"${it.trim()}\"" }.join(", ")
     
     // Detect backend by profile name
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Running Annotation Summary via Singularity container..."
         echo "CheckV summary: ${checkv_summary}"

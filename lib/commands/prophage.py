@@ -181,7 +181,10 @@ class ProphageCommand:
         # Add profile based on backend
         if self.config['backend'] == 'conda':
             cmd.extend(['-profile', 'conda'])
-        # singularity uses default profile
+        elif self.config['backend'] == 'singularity':
+            cmd.extend(['-profile', 'singularity'])
+        else:
+            raise ValueError(f"Unrecognized backend: {self.config['backend']!r}. Must be 'conda' or 'singularity'.")
         
         # Add workflow specification
         cmd.extend(['--workflow', 'prophage'])

@@ -28,7 +28,7 @@ process CLUSTER_PHAGES {
     }
     
     // Detect backend by profile name
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Running Cluster Phages via Singularity container..."
         echo "Input fasta: ${input_fasta}"

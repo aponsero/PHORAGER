@@ -27,7 +27,7 @@ process PARSE_CHECKV {
     def qualities = quality_levels.split(',').collect { "\"${it.trim()}\"" }.join(", ")
     
     // Detect backend by profile name
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         echo "Running Parse CheckV via Singularity container..."
         echo "CheckV directory: ${checkv_dir}"

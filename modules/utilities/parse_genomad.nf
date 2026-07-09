@@ -12,7 +12,7 @@ process PARSE_GENOMAD {
     def tool_spec = params.container_specs['parsing_env']
     def container_path = "${params.singularity_cache_dir}/${tool_spec.image}"
 
-    if (workflow.profile == 'standard' || workflow.profile.contains('singularity'))
+    if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))
         """
         # Create singularity cache directory
         mkdir -p ${params.singularity_cache_dir}
