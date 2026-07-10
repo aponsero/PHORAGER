@@ -27,54 +27,54 @@ workflow install {
         }
         
         // Handle null parameters safely
-        tools_list = params.tools ? params.tools.split(',').collect { it.trim() } : []
-        databases_list = params.databases ? params.databases.split(',').collect { it.trim() } : []
+        tools_list = params.tools ? params.tools.split(',').collect { tool -> tool.trim() } : []
+        databases_list = params.databases ? params.databases.split(',').collect { db -> db.trim() } : []
         
         // Create channels
-        tools_ch = tools_list ? Channel.fromList(tools_list) : Channel.empty()
-        databases_ch = databases_list ? Channel.fromList(databases_list) : Channel.empty()
+        tools_ch = tools_list ? channel.fromList(tools_list) : channel.empty()
+        databases_ch = databases_list ? channel.fromList(databases_list) : channel.empty()
 
         // Install genome analysis tools
         tools_ch
-            .filter { it == 'drep' }
-            .map { tool -> install_logs_dir }
+            .filter { tool -> tool == 'drep' }
+            .map { _tool -> install_logs_dir }
             .set { drep_input }
         
         tools_ch
-            .filter { it == 'checkm2' }
-            .map { tool -> install_logs_dir }
+            .filter { tool -> tool == 'checkm2' }
+            .map { _tool -> install_logs_dir }
             .set { checkm2_input }
 
         tools_ch
-            .filter { it == 'parsing_env' }
-            .map { tool -> install_logs_dir }
+            .filter { tool -> tool == 'parsing_env' }
+            .map { _tool -> install_logs_dir }
             .set { parsing_env_input }
         
         // Install prophage detection tools
         tools_ch
-            .filter { it == 'genomad' }
-            .map { tool -> install_logs_dir }
+            .filter { tool -> tool == 'genomad' }
+            .map { _tool -> install_logs_dir }
             .set { genomad_input }
         
         tools_ch
-            .filter { it == 'vibrant' }
-            .map { tool -> install_logs_dir }
+            .filter { tool -> tool == 'vibrant' }
+            .map { _tool -> install_logs_dir }
             .set { vibrant_input }
         
         // Install annotation tools
         tools_ch
-            .filter { it == 'checkv' }
-            .map { tool -> install_logs_dir }
+            .filter { tool -> tool == 'checkv' }
+            .map { _tool -> install_logs_dir }
             .set { checkv_input }
         
         tools_ch
-            .filter { it == 'pharokka' }
-            .map { tool -> install_logs_dir }
+            .filter { tool -> tool == 'pharokka' }
+            .map { _tool -> install_logs_dir }
             .set { pharokka_input }
         
         tools_ch
-            .filter { it == 'phold' }
-            .map { tool -> install_logs_dir }
+            .filter { tool -> tool == 'phold' }
+            .map { _tool -> install_logs_dir }
             .set { phold_input }
         
         // Run all tool installations
@@ -89,33 +89,33 @@ workflow install {
         
         // Create database input channels (always create, even if empty)
         databases_ch
-            .filter { it == 'checkm2' }
-            .map { db -> database_location }
+            .filter { db -> db == 'checkm2' }
+            .map { _db -> database_location }
             .set { checkm2_db_input }
         
         databases_ch
-            .filter { it == 'genomad' }
-            .map { db -> database_location }
+            .filter { db -> db == 'genomad' }
+            .map { _db -> database_location }
             .set { genomad_db_input }
         
         databases_ch
-            .filter { it == 'vibrant' }
-            .map { db -> database_location }
+            .filter { db -> db == 'vibrant' }
+            .map { _db -> database_location }
             .set { vibrant_db_input }
         
         databases_ch
-            .filter { it == 'checkv' }
-            .map { db -> database_location }
+            .filter { db -> db == 'checkv' }
+            .map { _db -> database_location }
             .set { checkv_db_input }
         
         databases_ch
-            .filter { it == 'pharokka' }
-            .map { db -> database_location }
+            .filter { db -> db == 'pharokka' }
+            .map { _db -> database_location }
             .set { pharokka_db_input }
         
         databases_ch
-            .filter { it == 'phold' }
-            .map { db -> database_location }
+            .filter { db -> db == 'phold' }
+            .map { _db -> database_location }
             .set { phold_db_input }
         
         // Run database installations with dependency logic
@@ -123,7 +123,7 @@ workflow install {
             // Both tool and database requested - database waits for tool
             INSTALL_CHECKM2_DATABASE(
                 checkm2_db_input.combine(INSTALL_CHECKM2.out.install_check)
-                                .map { db_location, tool_log -> db_location }
+                                .map { db_location, _tool_log -> db_location }
             )
         } else if ('checkm2' in databases_list) {
             // Only database requested - runs independently
@@ -134,7 +134,7 @@ workflow install {
             // Both tool and database requested - database waits for tool
             INSTALL_GENOMAD_DATABASE(
                 genomad_db_input.combine(INSTALL_GENOMAD.out.install_check)
-                                .map { db_location, tool_log -> db_location }
+                                .map { db_location, _tool_log -> db_location }
             )
         } else if ('genomad' in databases_list) {
             // Only database requested - runs independently
@@ -145,7 +145,7 @@ workflow install {
             // Both tool and database requested - database waits for tool
             INSTALL_VIBRANT_DATABASE(
                 vibrant_db_input.combine(INSTALL_VIBRANT.out.install_check)
-                               .map { db_location, tool_log -> db_location }
+                               .map { db_location, _tool_log -> db_location }
             )
         } else if ('vibrant' in databases_list) {
             // Only database requested - runs independently
@@ -156,7 +156,7 @@ workflow install {
             // Both tool and database requested - database waits for tool
             INSTALL_CHECKV_DATABASE(
                 checkv_db_input.combine(INSTALL_CHECKV.out.install_check)
-                               .map { db_location, tool_log -> db_location }
+                               .map { db_location, _tool_log -> db_location }
             )
         } else if ('checkv' in databases_list) {
             // Only database requested - runs independently
@@ -167,7 +167,7 @@ workflow install {
             // Both tool and database requested - database waits for tool
             INSTALL_PHAROKKA_DATABASE(
                 pharokka_db_input.combine(INSTALL_PHAROKKA.out.install_check)
-                                 .map { db_location, tool_log -> db_location }
+                                 .map { db_location, _tool_log -> db_location }
             )
         } else if ('pharokka' in databases_list) {
             // Only database requested - runs independently
@@ -178,7 +178,7 @@ workflow install {
             // Both tool and database requested - database waits for tool
             INSTALL_PHOLD_DATABASE(
                 phold_db_input.combine(INSTALL_PHOLD.out.install_check)
-                              .map { db_location, tool_log -> db_location }
+                              .map { db_location, _tool_log -> db_location }
             )
         } else if ('phold' in databases_list) {
             // Only database requested - runs independently

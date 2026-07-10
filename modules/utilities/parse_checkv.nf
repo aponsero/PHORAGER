@@ -24,7 +24,7 @@ process PARSE_CHECKV {
     }
     
     // Convert quality levels list to Python format - FIX: split by comma first
-    def qualities = quality_levels.split(',').collect { "\"${it.trim()}\"" }.join(", ")
+    def qualities = quality_levels.split(',').collect { level -> "\"${level.trim()}\"" }.join(", ")
     
     // Detect backend by profile name
     if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))

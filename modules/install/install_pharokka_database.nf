@@ -15,7 +15,6 @@ process INSTALL_PHAROKKA_DATABASE {
     def key_file = db_spec.key_file
     def expected_size = db_spec.expected_size_gb
     def download_url = db_spec.download_url
-    def description = db_spec.description
 
     // Validate required configuration
     if (!download_url) {

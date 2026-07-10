@@ -23,14 +23,14 @@ workflow annotation {
             
             // Validate file extension
             def valid_extensions = ['.fa', '.fasta', '.fna']
-            if (!valid_extensions.any { params.prophage.endsWith(it) }) {
+            if (!valid_extensions.any { ext -> params.prophage.endsWith(ext) }) {
                 error """
                 Invalid file extension. Prophage file must end with: ${valid_extensions.join(', ')}
                 Provided: ${params.prophage}
                 """.stripIndent()
             }
             
-            fasta_ch = Channel.fromPath(params.prophage, checkIfExists: true)
+            fasta_ch = channel.fromPath(params.prophage, checkIfExists: true)
             log.info "Using direct prophage FASTA input: ${params.prophage}"
             
         } else if (input.isDirectory()) {
@@ -40,14 +40,14 @@ workflow annotation {
             if (prophage_output.exists()) {
                 log.info "Detected prophage workflow output directory"
                 log.info "Using prophage sequences from: ${prophage_output}"
-                fasta_ch = Channel.fromPath(prophage_output)
+                fasta_ch = channel.fromPath(prophage_output)
             } else {
                 // Check if it's just the prophage detection subdirectory
                 def alt_prophage_output = file("${input}/All_prophage_sequences.fasta")
                 if (alt_prophage_output.exists()) {
                     log.info "Detected prophage detection subdirectory"
                     log.info "Using prophage sequences from: ${alt_prophage_output}"
-                    fasta_ch = Channel.fromPath(alt_prophage_output)
+                    fasta_ch = channel.fromPath(alt_prophage_output)
                 } else {
                     // Directory of FASTA files
                     def fasta_files = file("${input}/*.{fa,fasta,fna}")
@@ -63,7 +63,7 @@ workflow annotation {
                     
                     if (fasta_files.size() == 1) {
                         log.info "Found single prophage FASTA file in directory: ${fasta_files[0]}"
-                        fasta_ch = Channel.fromPath(fasta_files[0])
+                        fasta_ch = channel.fromPath(fasta_files[0])
                     } else {
                         error """
                         Multiple FASTA files found in directory: ${input}
@@ -72,7 +72,7 @@ workflow annotation {
                         1. A single combined FASTA file with all prophage sequences
                         2. Prophage workflow output directory
                         
-                        Found files: ${fasta_files.collect { it.getName() }.join(', ')}
+                        Found files: ${fasta_files.collect { fasta_file -> fasta_file.getName() }.join(', ')}
                         """.stripIndent()
                     }
                 }
@@ -89,9 +89,9 @@ workflow annotation {
         }
 
         // Create database channels using configuration-driven paths from database_specs
-        checkv_db_ch = Channel.fromPath("${params.database_location}/${params.database_specs.checkv.directory}", checkIfExists: true)
-        pharokka_db_ch = Channel.fromPath("${params.database_location}/${params.database_specs.pharokka.directory}", checkIfExists: true)
-        phold_db_ch = Channel.fromPath("${params.database_location}/${params.database_specs.phold.directory}", checkIfExists: true)
+        checkv_db_ch = channel.fromPath("${params.database_location}/${params.database_specs.checkv.directory}", checkIfExists: true)
+        pharokka_db_ch = channel.fromPath("${params.database_location}/${params.database_specs.pharokka.directory}", checkIfExists: true)
+        phold_db_ch = channel.fromPath("${params.database_location}/${params.database_specs.phold.directory}", checkIfExists: true)
 
         // Log workflow configuration
         log.info "Annotation workflow configuration:"
@@ -99,7 +99,7 @@ workflow annotation {
         log.info "  - Skip detailed annotation: ${params.skip_detailed_annotation}"
         log.info "  - Min prophage length: ${params.min_prophage_length}"
         log.info "  - CheckV quality levels: ${params.checkv_quality_levels}"
-        if (!params.skip_detailed_annotation) {
+        if (!params.skip_detailed_annotation.toBoolean()) {
             log.info "  - Annotation filter mode: ${params.annotation_filter_mode}"
             log.info "  - Pharokka thresholds: ${params.pharokka_structural_perc}% / ${params.pharokka_structural_total} genes"
             log.info "  - PHOLD thresholds: ${params.phold_structural_perc}% / ${params.phold_structural_total} genes"
@@ -117,30 +117,30 @@ workflow annotation {
         // Read the count and branch based on whether prophages were found
         PARSE_CHECKV.out.count
             .splitText()
-            .map { it.trim().toInteger() }
-            .branch {
-                found: it > 0
-                none: it == 0
+            .map { count_text -> count_text.trim().toInteger() }
+            .branch { count ->
+                found: count > 0
+                none: count == 0
             }
             .set { count_result }
 
         // Log the outcome
-        count_result.found.subscribe { 
-            log.info "Found ${it} prophages passing quality filters, proceeding with annotation pipeline..." 
+        count_result.found.subscribe { count ->
+            log.info "Found ${count} prophages passing quality filters, proceeding with annotation pipeline..."
         }
         count_result.none.subscribe { 
             log.warn "No prophages passed quality filters. Skipping annotation/clustering, generating summary report..." 
         }
 
         // Conditional execution based on prophage count
-        if (!params.skip_detailed_annotation) {
+        if (!params.skip_detailed_annotation.toBoolean()) {
             // Phase 2: Detailed annotation pipeline - only if prophages exist
             log.info "Configured for detailed annotation pipeline (Pharokka + PHOLD)"
             
             // Only split if we have prophages - filter by count
             PARSE_CHECKV.out.filtered_fasta
                 .combine(count_result.found)
-                .map { fasta, count -> fasta }
+                .map { fasta, _count -> fasta }
                 .set { fasta_for_split }
 
 
@@ -153,7 +153,7 @@ workflow annotation {
         		def work_dir = file_list.parent
         		// Read the file list
         		def files = file_list.text.split('\n')
-            			.findAll { it.trim() && !it.contains('filtered_prophages') }  // Remove empty lines
+            			.findAll { line -> line.trim() && !line.contains('filtered_prophages') }  // Remove empty lines
             			.collect { filename -> file("${work_dir}/${filename.trim()}") }
         		return files
     	   	 }
@@ -200,16 +200,16 @@ workflow annotation {
             // Branch based on annotation count to decide if clustering should run
             annotation_count_input
                 .splitText()
-                .map { it.trim().toInteger() }
-                .branch {
-                    found: it > 0
-                    none: it == 0
+                .map { count_text -> count_text.trim().toInteger() }
+                .branch { count ->
+                    found: count > 0
+                    none: count == 0
                 }
                 .set { annotation_count_result }
-            
+
             // Log annotation filtering outcome
-            annotation_count_result.found.subscribe { 
-                log.info "${it} sequences passed annotation filtering, proceeding with clustering..." 
+            annotation_count_result.found.subscribe { count ->
+                log.info "${count} sequences passed annotation filtering, proceeding with clustering..."
             }
             annotation_count_result.none.subscribe { 
                 log.warn "No sequences passed annotation filtering. Skipping clustering..." 
@@ -218,7 +218,7 @@ workflow annotation {
             // Only pass sequences to clustering if annotation count > 0
             PARSE_FILTER_ANNOTATIONS.out.filtered_fasta
                 .combine(annotation_count_result.found)
-                .map { fasta, count -> fasta }
+                .map { fasta, _count -> fasta }
                 .set { clustering_input }
             
         } else {
@@ -228,11 +228,11 @@ workflow annotation {
             // Only pass fasta if prophages were found
             PARSE_CHECKV.out.filtered_fasta
                 .combine(count_result.found)
-                .map { fasta, count -> fasta }
+                .map { fasta, _count -> fasta }
                 .set { clustering_input }
             
-            annotation_summary_input = Channel.empty()
-            annotation_count_input = Channel.empty()
+            annotation_summary_input = channel.empty()
+            annotation_count_input = channel.empty()
         }
 
         // Phase 3: Clustering pipeline - only if sequences available

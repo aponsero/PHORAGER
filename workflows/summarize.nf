@@ -7,6 +7,8 @@ process SUMMARIZE {
     val bacterial_outdir
     val annotation_outdir
     val summary_format
+    path runner
+    path summaries_pkg
 
     output:
     path "${summary_type}.${summary_format}", emit: summary_table
@@ -15,7 +17,6 @@ process SUMMARIZE {
     def tool_spec    = params.container_specs['parsing_env']
     def container_path = "${params.singularity_cache_dir}/${tool_spec.image}"
     def container_url  = tool_spec.singularity_url
-    def runner         = "${projectDir}/lib/summarize_runner.py"
 
     // Build optional directory arguments — only pass flags whose values
     // were actually provided (non-empty string, not the sentinel 'NONE')
@@ -40,7 +41,6 @@ process SUMMARIZE {
         fi
 
         singularity exec --no-home \\
-            --bind ${projectDir}:${projectDir} \\
             ${container_path} \\
             python3 ${runner} \\
                 --type    ${summary_type} \\

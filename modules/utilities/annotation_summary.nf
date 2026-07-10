@@ -36,7 +36,7 @@ process ANNOTATION_SUMMARY {
     }
     
     // Convert quality levels list to Python format - split by comma first
-    def qualities = checkv_quality_levels.split(',').collect { "\"${it.trim()}\"" }.join(", ")
+    def qualities = checkv_quality_levels.split(',').collect { level -> "\"${level.trim()}\"" }.join(", ")
     
     // Detect backend by profile name
     if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))

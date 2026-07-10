@@ -1,18 +1,6 @@
 #!/usr/bin/env nextflow
 nextflow.enable.dsl = 2
 
-log.info ""
-log.info "======================================"
-log.info "         PHORAGER PIPELINE            "
-log.info "======================================"
-log.info ""
-log.info "Workflow: ${params.workflow}"
-log.info "Installation logs directory: ${params.installation_logs_dir}"
-log.info "Database directory: ${params.database_location}"
-log.info "Output directory: ${params.outdir}"
-log.info "Profile: ${workflow.profile}"
-log.info ""
-
 // Include workflows
 include { install }    from './workflows/install'
 include { bacterial }  from './workflows/bacterial'
@@ -21,6 +9,18 @@ include { annotation } from './workflows/annotation'
 include { SUMMARIZE } from './workflows/summarize'
 
 workflow {
+    log.info ""
+    log.info "======================================"
+    log.info "         PHORAGER PIPELINE            "
+    log.info "======================================"
+    log.info ""
+    log.info "Workflow: ${params.workflow}"
+    log.info "Installation logs directory: ${params.installation_logs_dir}"
+    log.info "Database directory: ${params.database_location}"
+    log.info "Output directory: ${params.outdir}"
+    log.info "Profile: ${workflow.profile}"
+    log.info ""
+
     if (params.workflow == 'install') {
         log.info "Running installation workflow..."
         install()
@@ -43,7 +43,9 @@ workflow {
             params.summary_type,
             params.bacterial_outdir ?: 'NONE',
             params.annotation_outdir ?: 'NONE',
-            params.summary_format ?: 'tsv'
+            params.summary_format ?: 'tsv',
+            file("${projectDir}/lib/summarize_runner.py"),
+            file("${projectDir}/lib/summaries")
         )
     }
     else {

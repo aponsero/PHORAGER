@@ -8,12 +8,12 @@ workflow bacterial {
         // Define input channel for genomes
         def input = file(params.genome)
         if (input.isDirectory()) {
-            genome_ch = Channel.fromPath("${params.genome}/*.{fa,fasta,fna}", checkIfExists: true)
+            genome_ch = channel.fromPath("${params.genome}/*.{fa,fasta,fna}", checkIfExists: true)
         } else {
-            genome_ch = Channel.fromPath(params.genome, checkIfExists: true)
+            genome_ch = channel.fromPath(params.genome, checkIfExists: true)
         }
 
-        checkm2_db_ch = Channel.fromPath("${params.database_location}/CheckM2_database", checkIfExists: true)
+        checkm2_db_ch = channel.fromPath("${params.database_location}/CheckM2_database", checkIfExists: true)
 
         // Run CheckM2
         CHECKM2(genome_ch.collect(), checkm2_db_ch, params.threads)
@@ -27,21 +27,21 @@ workflow bacterial {
                 def lines = file.readLines()
                 return [lines.size(), file]
             }
-            .branch {
-                run_drep: it[0] > 1
+            .branch { entry ->
+                run_drep: entry[0] > 1
                 skip_drep: true
             }
             .set { drep_decision }
 
         // Run dRep only if we have more than 1 genome
-        if_drep = drep_decision.run_drep.map { it[1] }
-        
+        if_drep = drep_decision.run_drep.map { entry -> entry[1] }
+
         DREP(
             if_drep,
             genome_ch.collect(),
             params.drep_ani_threshold,
             params.threads,
-            drep_decision.run_drep.map { it[0] }  // genome count
+            drep_decision.run_drep.map { entry -> entry[0] }  // genome count
         )
 
         // Create a channel for the final dRep output

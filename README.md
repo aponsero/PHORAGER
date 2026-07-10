@@ -16,9 +16,9 @@
 **Authors:**  
 
 - Xena Dyball
-- James Docherty
 - [Alise Ponsero](https://github.com/aponsero)
 - Ryan Cook
+- James Docherty
 
 **Citation:**
 [Paper Citation or Preprint Link]
@@ -36,24 +36,48 @@ Phorager provides an integrated workflow for:
 
 > **Note**: Phorager is currently in beta release. We welcome feedback, bug reports, and feature requests through our [issue tracker](../../issues).
 
+## What you need to start Phoraging
+
+- Python 3.9+
+- Nextflow v24.04.0 (minimum tested) to 26.04
+- Singularity or conda 
+
+
 ## Quick Start
+
+## 0.Clone the repository
+
+```bash
+git clone https://github.com/aponsero/PHORAGER.git
+cd PHORAGER
+
+# Add to your ~/.bashrc or ~/.bash_profile
+export PATH="/path/to/phorager:$PATH"
+
+# Reload your shell configuration
+source ~/.bashrc
+```
 
 ### 1. Configure
 Set your preferred installation backend and locations:
 
 ```bash
-phorager config set --backend conda --db-location /data/phorager
+# Choose your backend (conda or singularity)
+phorager config set --backend conda
+
+# Set database location (adjust path as needed)
+phorager config set --db-location /data/phorager/databases
+
+# Set cache location for conda environments or singularity containers
+phorager config set --cache-location /data/phorager/cache
 ```
 
 ### 2. Install
 Install required tools and databases:
 
 ```bash
-# Install tools for bacterial genome analysis
-phorager install --tools genome --databases checkm2
-
-# Install prophage detection tools
-phorager install --tools prophage --databases genomad,vibrant
+# Install all tools and databases
+phorager install --tools all --databases all
 ```
 
 ### 3. Run Analysis

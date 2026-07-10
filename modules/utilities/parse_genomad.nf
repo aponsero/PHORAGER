@@ -1,6 +1,6 @@
 process PARSE_GENOMAD {
     tag "Parse GenoMAD results for ${genome_name}"
-    publishDir "${params.outdir}/2.Prophage_detection/Proph1_geNomad/${genome_name}", mode: 'copy'
+    publishDir { "${params.outdir}/2.Prophage_detection/Proph1_geNomad/${genome_name}" }, mode: 'copy'
     
     input:
     tuple val(genome_name), path('genomad_output')

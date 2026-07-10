@@ -14,7 +14,6 @@ process INSTALL_VIBRANT_DATABASE {
     def db_path = "${database_location}/${db_spec.directory}"
     def key_file = db_spec.key_file
     def expected_size = db_spec.expected_size_gb
-    def description = db_spec.description
 
     // Validate required configuration
     if (!key_file) {
@@ -26,7 +25,7 @@ process INSTALL_VIBRANT_DATABASE {
         echo "Installing VIBRANT database via manual construction (Singularity)..."
         
         mkdir -p ${database_location}
-        WORK_DIR="$PWD"
+        WORK_DIR="\$PWD"
         
         if [ -f "${db_path}/databases/${key_file}" ] && [ -f "${db_path}/.download_complete" ]; then
             echo "VIBRANT database already exists, skipping download."
@@ -166,7 +165,7 @@ process INSTALL_VIBRANT_DATABASE {
             actual_size="Unknown"
         fi
         
-        cd $WORK_DIR
+        cd \$WORK_DIR
         echo "VIBRANT database installation completed successfully." > vibrant_database_install_check.log
         echo "Database location: ${db_path}" >> vibrant_database_install_check.log
         echo "Key file: ${key_file} verified" >> vibrant_database_install_check.log
@@ -180,7 +179,7 @@ process INSTALL_VIBRANT_DATABASE {
         echo "Installing VIBRANT database via manual construction (Conda)..."
         
         mkdir -p ${database_location}
-        WORK_DIR="$PWD"
+        WORK_DIR="\$PWD"
         
         if [ -f "${db_path}/databases/${key_file}" ] && [ -f "${db_path}/.download_complete" ]; then
             echo "VIBRANT database already exists, skipping download."
@@ -267,7 +266,7 @@ process INSTALL_VIBRANT_DATABASE {
             actual_size="Unknown"
         fi
         
-        cd $WORK_DIR
+        cd \$WORK_DIR
         echo "VIBRANT database installation completed successfully." > vibrant_database_install_check.log
         echo "Database location: ${db_path}" >> vibrant_database_install_check.log
         echo "Key file: databases/${key_file} verified" >> vibrant_database_install_check.log

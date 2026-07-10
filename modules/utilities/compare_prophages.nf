@@ -1,6 +1,6 @@
 process COMPARE_PROPHAGES {
     tag "Comparing prophages for ${genome_name}"
-    publishDir "${params.outdir}/2.Prophage_detection/Proph3_Comparison/${genome_name}", mode: 'copy'
+    publishDir { "${params.outdir}/2.Prophage_detection/Proph3_Comparison/${genome_name}" }, mode: 'copy'
 
     input:
     tuple val(genome_name), path(genomad_coords), path(vibrant_coords), path(genome_file)

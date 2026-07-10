@@ -1,6 +1,6 @@
 process PARSE_VIBRANT {
     tag "Parse VIBRANT results for ${genome_name}"
-    publishDir "${params.outdir}/2.Prophage_detection/Proph2_VIBRANT/${genome_name}", mode: 'copy'
+    publishDir { "${params.outdir}/2.Prophage_detection/Proph2_VIBRANT/${genome_name}" }, mode: 'copy'
     
     input:
     tuple val(genome_name), path('vibrant_dir')

@@ -20,28 +20,28 @@ workflow prophage {
                 if (genome_files && genome_files.size() > 0) {
                     log.info "Detected bacterial workflow output directory"
                     log.info "Using dereplicated genomes from: ${bacterial_genomes}"
-                    genomes = Channel.fromPath("${bacterial_genomes}/*.{fa,fasta,fna}")
+                    genomes = channel.fromPath("${bacterial_genomes}/*.{fa,fasta,fna}")
                         .ifEmpty { error "No FASTA files found in dereplicated genomes directory: ${bacterial_genomes}" }
                 } else {
                     log.info "Using directory of FASTA files: ${input}"
-                    genomes = Channel.fromPath("${input}/*.{fa,fasta,fna}")
+                    genomes = channel.fromPath("${input}/*.{fa,fasta,fna}")
                         .ifEmpty { error "No FASTA files found in directory: ${input}" }
                 }
             } else {
                 log.info "Using directory of FASTA files: ${input}"
-                genomes = Channel.fromPath("${input}/*.{fa,fasta,fna}")
+                genomes = channel.fromPath("${input}/*.{fa,fasta,fna}")
                     .ifEmpty { error "No FASTA files found in directory: ${input}" }
             }
         } else if (input.isFile()) {
             log.info "Using single FASTA file: ${input}"
-            genomes = Channel.fromPath(params.genome)
+            genomes = channel.fromPath(params.genome)
                 .ifEmpty { error "Genome file not found: ${params.genome}" }
         } else {
             error "Input path does not exist or is not accessible: ${params.genome}"
         }
 
         // Rename contigs for unique identifiers (optional)
-        if (params.rename_contigs) {
+        if (params.rename_contigs.toBoolean()) {
             log.info "Renaming contigs to ensure unique identifiers..."
             RENAME_CONTIGS(genomes.collect())
             genomes_for_tools = RENAME_CONTIGS.out.renamed_genomes.flatten()
@@ -49,36 +49,36 @@ workflow prophage {
         } else {
             log.info "Skipping contig renaming (rename_contigs = false)"
             genomes_for_tools = genomes
-            mapping_file = Channel.empty()
+            mapping_file = channel.empty()
         }
 
         // Database path construction from config specs
-        genomad_db_ch = Channel.fromPath("${params.database_location}/${params.database_specs.genomad.directory}")
-        vibrant_db_ch = Channel.fromPath("${params.database_location}/${params.database_specs.vibrant.directory}")
+        genomad_db_ch = channel.fromPath("${params.database_location}/${params.database_specs.genomad.directory}")
+        vibrant_db_ch = channel.fromPath("${params.database_location}/${params.database_specs.vibrant.directory}")
 
         // Tool execution with conditional logic
-        if (params.run_genomad) {
+        if (params.run_genomad.toBoolean()) {
             log.info "Running GenoMAD analysis with preset: ${params.genomad_preset}"
             GENOMAD(genomes_for_tools, genomad_db_ch)
             PARSE_GENOMAD(GENOMAD.out.results)
             genomad_coords = PARSE_GENOMAD.out.coordinates
         } else {
             log.info "Skipping GenoMAD analysis (run_genomad = false)"
-            genomad_coords = Channel.empty()
+            genomad_coords = channel.empty()
         }
 
-        if (params.run_vibrant) {
+        if (params.run_vibrant.toBoolean()) {
             log.info "Running VIBRANT analysis with minimum length: ${params.vibrant_min_length} bp"
             VIBRANT(genomes_for_tools, vibrant_db_ch)
             PARSE_VIBRANT(VIBRANT.out.results)
             vibrant_coords = PARSE_VIBRANT.out.coordinates
         } else {
             log.info "Skipping VIBRANT analysis (run_vibrant = false)"
-            vibrant_coords = Channel.empty()
+            vibrant_coords = channel.empty()
         }
         
         // Error handling for when both tools are disabled
-        if (!params.run_genomad && !params.run_vibrant) {
+        if (!params.run_genomad.toBoolean() && !params.run_vibrant.toBoolean()) {
             error "At least one prophage detection tool must be enabled. Set run_genomad=true or run_vibrant=true"
         }
 
@@ -96,8 +96,8 @@ workflow prophage {
             .combine(genome_ch, by: 0)
             .map { genome_name, coords_files, genome_file ->
                 // Intelligently assign files based on their naming pattern
-                def genomad_file = coords_files.find { it.name.contains('genomad') }
-                def vibrant_file = coords_files.find { it.name.contains('vibrant') }
+                def genomad_file = coords_files.find { coord_file -> coord_file.name.contains('genomad') }
+                def vibrant_file = coords_files.find { coord_file -> coord_file.name.contains('vibrant') }
                 
                 // Create placeholder file paths if tool didn't produce results
                 // The Python script checks for 'NO_RESULTS' suffix and returns empty DataFrame
@@ -118,7 +118,7 @@ workflow prophage {
         comparison_summaries = COMPARE_PROPHAGES.out.summary
             .collect()
         consolidated_coords = COMPARE_PROPHAGES.out.consolidated
-            .map { genome_name, file -> file }
+            .map { _genome_name, file -> file }
             .collect()
         prophage_sequences = COMPARE_PROPHAGES.out.prophage_sequences
             .collect()

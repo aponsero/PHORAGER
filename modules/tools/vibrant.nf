@@ -1,6 +1,6 @@
 process VIBRANT {
     tag "VIBRANT on ${genome.simpleName}"
-    publishDir "${params.outdir}/2.Prophage_detection/Proph2_VIBRANT/${genome.simpleName}", 
+    publishDir { "${params.outdir}/2.Prophage_detection/Proph2_VIBRANT/${genome.simpleName}" },
         mode: 'symlink',
         enabled: false,
         saveAs: { filename -> 
