@@ -16,11 +16,11 @@ process PARSE_CHECKV {
     // This process uses the parsing_env (Python + BioPython)
     def tool_spec = params.container_specs['parsing_env']
     def container_path = "${params.singularity_cache_dir}/${tool_spec.image}"
-    def container_url = tool_spec.singularity_url
-    
+    def container_url = tool_spec.docker_url
+
     // Validate required configuration
     if (!container_url) {
-        error "Missing singularity_url in container_specs for parsing_env"
+        error "Missing docker_url in container_specs for parsing_env"
     }
     
     // Convert quality levels list to Python format - FIX: split by comma first

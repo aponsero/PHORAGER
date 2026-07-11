@@ -13,7 +13,7 @@ process INSTALL_PARSING_ENV {
     // Get tool specifications from config
     def tool_spec = params.container_specs['parsing_env']
     def container_path = "${params.singularity_cache_dir}/${tool_spec.image}"
-    def container_url = tool_spec.singularity_url
+    def container_url = tool_spec.docker_url
     def verification_cmd = tool_spec.verification_cmd
     def version_pattern = tool_spec.version_pattern
     

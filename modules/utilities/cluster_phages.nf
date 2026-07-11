@@ -20,11 +20,11 @@ process CLUSTER_PHAGES {
     // This process uses the checkv environment (includes blast, seqfu, python)
     def tool_spec = params.container_specs['checkv']
     def container_path = "${params.singularity_cache_dir}/${tool_spec.image}"
-    def container_url = tool_spec.singularity_url
-    
+    def container_url = tool_spec.docker_url
+
     // Validate required configuration
     if (!container_url) {
-        error "Missing singularity_url in container_specs for checkv"
+        error "Missing docker_url in container_specs for checkv"
     }
     
     // Detect backend by profile name

@@ -16,7 +16,7 @@ process SUMMARIZE {
     script:
     def tool_spec    = params.container_specs['parsing_env']
     def container_path = "${params.singularity_cache_dir}/${tool_spec.image}"
-    def container_url  = tool_spec.singularity_url
+    def container_url  = tool_spec.docker_url
 
     // Build optional directory arguments — only pass flags whose values
     // were actually provided (non-empty string, not the sentinel 'NONE')

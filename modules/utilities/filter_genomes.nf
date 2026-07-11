@@ -14,7 +14,7 @@ process FILTER_GENOMES {
     // Get tool specifications from config
     def tool_spec = params.container_specs['parsing_env']
     def container_path = "${params.singularity_cache_dir}/${tool_spec.image}"
-    def container_url = tool_spec.singularity_url
+    def container_url = tool_spec.docker_url
     
     // Detect backend by profile name
     if (workflow.profile.contains('singularity') || workflow.profile.contains('standard'))

@@ -13,13 +13,13 @@ process INSTALL_CHECKV {
     // Get tool specifications from config
     def tool_spec = params.container_specs['checkv']
     def container_path = "${params.singularity_cache_dir}/${tool_spec.image}"
-    def container_url = tool_spec.singularity_url
+    def container_url = tool_spec.docker_url
     def verification_cmd = tool_spec.verification_cmd
     def version_pattern = tool_spec.version_pattern
-    
+
     // Validate required configuration
     if (!container_url) {
-        error "Missing singularity_url in container_specs for checkv"
+        error "Missing docker_url in container_specs for checkv"
     }
     if (!verification_cmd) {
         error "Missing verification_cmd in container_specs for checkv"
