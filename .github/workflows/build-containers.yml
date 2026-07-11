@@ -20,12 +20,12 @@ jobs:
     strategy:
       matrix:
         include:
-          - name: parsing-env
+	  - name: parsing-env
             dockerfile: containers/parsing-env/Dockerfile
-            tag: '1.0'
+            tag: '1.1'
           - name: checkv-bundle
             dockerfile: containers/checkv-bundle/Dockerfile
-            tag: '1.0'
+            tag: '1.1'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
