@@ -20,7 +20,7 @@ jobs:
     strategy:
       matrix:
         include:
-	  - name: parsing-env
+          - name: parsing-env
             dockerfile: containers/parsing-env/Dockerfile
             tag: '1.1'
           - name: checkv-bundle
