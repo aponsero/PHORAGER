@@ -37,7 +37,9 @@ process INSTALL_VIBRANT_DATABASE {
             mkdir -p ${db_path}/databases
             mkdir -p ${db_path}/files
             cd ${db_path}
-            
+            BUILD_DIR=\$(realpath .)
+            cd "\$BUILD_DIR"
+
             # Step 1: Download source databases
             echo "Downloading source databases (VOG, Pfam, KEGG)..."
             wget --no-check-certificate -O vog.hmm.tar.gz "http://fileshare.csb.univie.ac.at/vog/vog94/vog.hmm.tar.gz"
@@ -84,21 +86,21 @@ process INSTALL_VIBRANT_DATABASE {
             
             # Step 5: Filter profiles using VIBRANT selections
             echo "Filtering profiles using VIBRANT selections..."
-            singularity exec --no-home ${params.singularity_cache_dir}/quay.io-biocontainers-vibrant-1.2.1--hdfd78af_4.img \\
+            singularity exec --no-home --bind "\$BUILD_DIR" ${params.singularity_cache_dir}/${params.container_specs['vibrant'].image} \\
                 hmmfetch -o VOGDB94_phage.HMM -f vog_temp.HMM profile_names/VIBRANT_vog_profiles.txt
 
-            singularity exec --no-home ${params.singularity_cache_dir}/quay.io-biocontainers-vibrant-1.2.1--hdfd78af_4.img \\
+            singularity exec --no-home --bind "\$BUILD_DIR" ${params.singularity_cache_dir}/${params.container_specs['vibrant'].image} \\
                 hmmfetch -o KEGG_profiles_prokaryotes.HMM -f kegg_temp.HMM profile_names/VIBRANT_kegg_profiles.txt
 
             # Step 6: Press all HMM databases (avoiding the parallelism bug)
             echo "Creating HMM indexes (sequential to avoid parallelism bugs)..."
-            singularity exec --no-home ${params.singularity_cache_dir}/quay.io-biocontainers-vibrant-1.2.1--hdfd78af_4.img \\
+            singularity exec --no-home --bind "\$BUILD_DIR" ${params.singularity_cache_dir}/${params.container_specs['vibrant'].image} \\
                 hmmpress VOGDB94_phage.HMM
 
-            singularity exec --no-home ${params.singularity_cache_dir}/quay.io-biocontainers-vibrant-1.2.1--hdfd78af_4.img \\
+            singularity exec --no-home --bind "\$BUILD_DIR" ${params.singularity_cache_dir}/${params.container_specs['vibrant'].image} \\
                 hmmpress KEGG_profiles_prokaryotes.HMM
 
-            singularity exec --no-home ${params.singularity_cache_dir}/quay.io-biocontainers-vibrant-1.2.1--hdfd78af_4.img \\
+            singularity exec --no-home --bind "\$BUILD_DIR" ${params.singularity_cache_dir}/${params.container_specs['vibrant'].image} \\
                 hmmpress Pfam-A_v32.HMM
 
             # move results to databases directory
