@@ -53,13 +53,10 @@ process INSTALL_CHECKV_DATABASE {
             
             # Build DIAMOND database using container
             echo "Building DIAMOND database..."
-            cd "${db_path}/genome_db"
-            
-            # Use the CheckV container to build DIAMOND database
-            singularity exec --no-home ${params.singularity_cache_dir}/${params.container_specs['checkv'].image} \\
-                diamond makedb --in checkv_reps.faa --db checkv_reps
-            
-            cd -
+            GENOME_DB=\$(realpath "${db_path}/genome_db")
+            singularity exec --no-home --bind "\$GENOME_DB" \\
+                ${params.singularity_cache_dir}/${params.container_specs['checkv'].image} \\
+                diamond makedb --in "\$GENOME_DB/checkv_reps.faa" --db "\$GENOME_DB/checkv_reps"
             
             # Remove the tar file to save space
             rm ${database_location}/checkv-db-v1.5.tar.gz
