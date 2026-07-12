@@ -37,10 +37,12 @@ process INSTALL_PHOLD_DATABASE {
             
             rm -rf ${db_path}
             mkdir -p ${db_path}
-            
+
             # Use Phold container to install database
-            singularity exec --no-home ${params.singularity_cache_dir}/quay.io-biocontainers-phold-0.2.0--pyhdfd78af_0.img \\
-                phold install -d ${db_path}
+            PHOLD_DB=\$(realpath ${db_path})
+            singularity exec --no-home --bind \$PHOLD_DB \\
+                ${params.singularity_cache_dir}/${params.container_specs['phold'].image} \\
+                phold install -d \$PHOLD_DB
             
             # Verify the key file exists
             if [ ! -f "${db_path}/${key_file}" ]; then

@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **`phorager install --databases phold` failed on Singularity/Apptainer with `FileExistsError: 'databases'` during `phold install`**
+  - `db_path` was passed to `phold install -d` as a relative path that resolves through Nextflow's staged `databases` symlink. `phold`'s internal `Path.mkdir(parents=True)` doesn't treat that symlink as a real directory and raises `FileExistsError` when it tries to create it
+  - Fixed in `install_phold_database.nf` (Singularity branch only) by resolving `db_path` to a real path with `realpath` and binding it explicitly into the container before calling `phold install -d`, the same pattern already used for CheckV's DIAMOND build
+  - Also derived the container image from `params.container_specs['phold'].image` instead of a hardcoded `quay.io-biocontainers-phold-0.2.0--pyhdfd78af_0.img` literal, closing the same config-drift gap fixed for CheckV. The Conda branch (no container, no symlink issue) is unchanged
+
 - **`phorager install --databases checkv` downloaded and extracted the CheckV database but never built its DIAMOND index, failing every attempt with the download always re-run from scratch**
   - `INSTALL_CHECKV_DATABASE` (`install_checkv_database.nf`) downloads the CheckV v1.5 archive from NERSC, extracts it, then builds the DIAMOND database (`checkv_reps.dmnd`) that CheckV requires as its key file. Two independent defects in the Singularity branch meant the build step never succeeded, so the key file was never produced and the process failed after a full 1.68 GB download every time
   - **(a)** The DIAMOND build invoked `singularity exec` against a hardcoded container filename, `checkv-env-1.0.sif`, that never matched any configured container — not the old Sylabs image (`checkv_mpi_1.0.sif`) and not the current one. `singularity exec` aborted with "no such file or directory" and `diamond makedb` never ran. This literal predates the container migration; it would not have resolved under the previous config either. Fixed by deriving the container from `params.container_specs['checkv'].image`, the same source of truth every other CheckV process now uses, so it can no longer drift
