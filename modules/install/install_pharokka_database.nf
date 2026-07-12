@@ -35,10 +35,10 @@ process INSTALL_PHAROKKA_DATABASE {
         else
             echo "Downloading Pharokka database from Zenodo..."
             
-            # rm -rf ${db_path}
+            rm -rf ${db_path}
             
             # Download database directly from Zenodo
-            # wget --no-check-certificate -O ${database_location}/pharokka_v1.8.0_databases.tar.gz "${download_url}"
+            wget --no-check-certificate -O ${database_location}/pharokka_v1.8.0_databases.tar.gz "${download_url}"
             
             # Extract the database
             tar -xzf ${database_location}/pharokka_v1.8.0_databases.tar.gz -C ${database_location}
