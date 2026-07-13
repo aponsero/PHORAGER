@@ -190,10 +190,10 @@ class ProphageCommand:
         cmd.extend(['--workflow', 'prophage'])
         
         # Add genome input
-        cmd.extend(['--genome', args.genome])
-        
+        cmd.extend(['--genome', str(Path(args.genome).resolve())])
+
         # Add output directory
-        cmd.extend(['--outdir', args.outdir])
+        cmd.extend(['--outdir', str(Path(args.outdir).resolve())])
         
         # Add database location (only if configured)
         if self.config.get('db_location'):
