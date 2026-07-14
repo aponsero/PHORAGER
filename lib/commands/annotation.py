@@ -292,8 +292,8 @@ class AnnotationCommand:
         # Core workflow parameters
         cmd.extend([
             '--workflow', 'annotation',
-            '--prophage', resolved_input,
-            '--outdir', args.outdir,
+            '--prophage', str(Path(resolved_input).resolve()),
+            '--outdir', str(Path(args.outdir).resolve()),
             '--database_location', self.config['db_location']
         ])
         

@@ -244,8 +244,8 @@ class BacterialCommand:
         cmd.extend(['--workflow', 'bacterial'])
         
         # Add required parameters
-        cmd.extend(['--genome', params['genome']])
-        cmd.extend(['--outdir', params['outdir']])
+        cmd.extend(['--genome', str(Path(params['genome']).resolve())])
+        cmd.extend(['--outdir', str(Path(params['outdir']).resolve())])
         
         # Add workflow parameters
         if params['threads'] is not None:
