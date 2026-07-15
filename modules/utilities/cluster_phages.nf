@@ -73,9 +73,7 @@ process CLUSTER_PHAGES {
         # 1. Make BLAST database
         echo "Creating BLAST database..."
         singularity exec --no-home ${container_path} \\
-            makeblastdb -in ${input_fasta} \\
-                        -dbtype nucl \\
-                        -out blast_db/filtered_phage_db
+            bash -c "cd blast_db && makeblastdb -in ../${input_fasta} -dbtype nucl -out filtered_phage_db"
         
         # 2. Run all-vs-all BLAST
         echo "Running all-vs-all BLAST..."
@@ -152,9 +150,7 @@ process CLUSTER_PHAGES {
         
         # 1. Make BLAST database
         echo "Creating BLAST database..."
-        makeblastdb -in ${input_fasta} \\
-                    -dbtype nucl \\
-                    -out blast_db/filtered_phage_db
+        ( cd blast_db && makeblastdb -in ../${input_fasta} -dbtype nucl -out filtered_phage_db )
         
         # 2. Run all-vs-all BLAST
         echo "Running all-vs-all BLAST..."
