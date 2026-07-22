@@ -122,6 +122,7 @@ Output is written to `results/4.Summaries/`. Use `phorager summarize --list` to 
 - [Prophage Workflow](../../wiki/Prophage-Workflow) - Integrated prophage detection
 - [Annotation Workflow](../../wiki/Annotation-Workflow) - Prophage annotation and clustering
 - [Summary Workflow](../../wiki/Summary-Workflow) - Generating summary tables from pipeline outputs
+- [Datasets created with PHORAGER](../..//wiki/Datasets-created-with-Phorager) - List of large scale datasets created by the authors using PHORAGER
 
 ## Getting Help
 
