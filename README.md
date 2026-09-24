@@ -21,7 +21,9 @@
 - James Docherty
 
 **Citation:**
-[Paper Citation or Preprint Link]
+Defining the ESKAPE pathogen prophage repertoire with PHORAGER
+Xena Dyball, Alise J Ponsero, James A D Docherty, Andrea Telatin, Emmanuelle H Crost, Nathalie Juge, Ryan Cook, Evelien M Adriaenssens
+bioRxiv 2026.08.05.742953; doi: https://doi.org/10.64898/2026.08.05.742953
 
 </div>
 
